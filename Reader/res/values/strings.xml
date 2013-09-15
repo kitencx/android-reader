@@ -11,5 +11,6 @@
     <string name="title_activity_chapter">ChapterActivity</string>
     <string name="hello_world">Hello world!</string>
     <string name="title_activity_content">ContentActivity</string>
+    <string name="imagecontent_description">图片内容</string>
 
 </resources>

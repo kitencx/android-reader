@@ -4,6 +4,9 @@ import java.util.ArrayList;
 
 import android.graphics.Paint;
 
+/**
+ * 分页工具类，根据指定的尺寸和字体，将需要显示的内容分页
+ * */
 public class PageMaker {
 	private String content;
 	private int width;
@@ -78,24 +81,32 @@ public class PageMaker {
 	 * @return true 有上一页
 	 * */
 	public boolean prePage(){
-		int i = 0;
+		ArrayList<String> lines = new ArrayList<String>();
 		if(begin > 0){
-			while(i < lineCount){
+			while(lines.size() < lineCount){
 				String preParagraph = readParagraphBack(begin);
-				if(preParagraph != null){
-					begin -= preParagraph.length();
+				
+				if(preParagraph == null) break;
 
-					while(i < lineCount){
-						int length = paint.breakText(preParagraph, true, drawableWidth, null);
-						i++;
-						preParagraph = preParagraph.substring(length);
-						if(preParagraph.length() <= 0){
-							break;
-						}
-					}
-					begin += preParagraph.length();
-				}else{
-					break;
+				begin -= preParagraph.length();
+
+				if(lines.size() == 0){
+					//跳过页首空行
+					if(preParagraph.equals("\n") || preParagraph.equals("")) continue; 
+				}
+				
+				ArrayList<String> para = new ArrayList<String>();
+				while(preParagraph.length() > 0){
+					//反向读取段落，每次都读取一个完整段落
+					int length = paint.breakText(preParagraph, true, drawableWidth, null);
+					para.add(preParagraph.substring(0, length));
+					preParagraph = preParagraph.substring(length);
+				}
+				//将新读取的段落加入到前行
+				lines.addAll(0, para);
+				//去除反向读取多余部分，即顶行所在段落多余部分
+				while(lines.size() > lineCount){
+					begin += lines.remove(0).length();
 				}
 			}
 			end = begin;
@@ -105,6 +116,10 @@ public class PageMaker {
 		}
 	}
 	
+	/**
+	 * 往后读取一页文本，将指针指向下一页起始位置
+	 * @return 返回读取的文本，每个Item代表一行文本，ArrayList.size()与View可显示的文本行数相等
+	 * */
 	public ArrayList<String> nextPage(){
 		ArrayList<String> lines = new ArrayList<String>();
 		if(end < content.length()){
@@ -113,6 +128,11 @@ public class PageMaker {
 				String nextParagraph = readParagraphForward(end);
 				if(nextParagraph != null){
 					end += nextParagraph.length();
+					
+					if(lines.size() == 0){
+						//忽略页首的空行
+						if(nextParagraph.equals("\n") || nextParagraph.equals("")) continue;
+					}
 					
 					while(lines.size() < lineCount){
 						int length = paint.breakText(nextParagraph, true, drawableWidth, null);
@@ -176,7 +196,9 @@ public class PageMaker {
 	private void resizeDrawableArea(){
 		this.drawableWidth = width - marginLeft - marginRight - paddingLeft - paddingRight;
 		this.drawableHeight = height - marginTop - marginBottom - paddingTop - paddingBottom;
-		float textsize = paint.getTextSize();
-		this.lineCount = (int)(drawableHeight/textsize);
+		if(paint != null){
+			float textsize = paint.getTextSize();
+			this.lineCount = (int)(drawableHeight/textsize);
+		}
 	}
 }

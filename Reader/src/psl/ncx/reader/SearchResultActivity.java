@@ -10,7 +10,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.view.Menu;
 import android.view.View;
-import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -20,16 +19,10 @@ import android.widget.TextView;
 
 public class SearchResultActivity extends Activity {
 	private ListView listView;
-	private ImageView processing;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		//显示载入动画
-		setContentView(R.layout.loading);
-		processing = (ImageView) findViewById(R.id.imageview_loading);
-		
-		Animation animation = AnimationUtils.loadAnimation(this, R.drawable.processing);
-		processing.startAnimation(animation);
 		
 		Intent intent = getIntent();
 		String keyword = intent.getStringExtra("keyword");
@@ -52,7 +45,14 @@ public class SearchResultActivity extends Activity {
 	}
 
 	private class SearchBook extends AsyncTask<String, Integer, ArrayList<String[]>>{
-
+		@Override
+		protected void onPreExecute() {
+			//显示载入动画
+			setContentView(R.layout.loading);
+			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
+			processing.startAnimation(AnimationUtils.loadAnimation(SearchResultActivity.this, R.drawable.processing));
+		}
+		
 		/**
 		 * 查询包含指定关键字的小说，书名/作者
 		 * @param params 包含查询条件的数组，0:关键字	1:查询所使用编码
@@ -64,10 +64,7 @@ public class SearchResultActivity extends Activity {
 		
 		@Override
 		protected void onPostExecute(ArrayList<String[]> result) {
-			//移除载入动画
-			processing.clearAnimation();
-			
-			SearchResultActivity.this.setContentView(R.layout.activity_search_result);
+			setContentView(R.layout.activity_search_result);
 			listView = (ListView) findViewById(R.id.listview_result);
 			TextView header = new TextView(SearchResultActivity.this);
 			header.setText("搜索结果");
@@ -78,7 +75,6 @@ public class SearchResultActivity extends Activity {
 			listView.setAdapter(adapter);
 			
 			listView.setOnItemClickListener(new OnItemClickListener() {
-
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
@@ -89,7 +85,6 @@ public class SearchResultActivity extends Activity {
 					startActivity(intent);
 					overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 				}
-				
 			});
 		}
 	}

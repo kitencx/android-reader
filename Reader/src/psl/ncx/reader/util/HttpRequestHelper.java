@@ -2,12 +2,17 @@ package psl.ncx.reader.util;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.Map;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 public class HttpRequestHelper {
 	/**
@@ -75,6 +80,34 @@ public class HttpRequestHelper {
 			dos.writeBytes(payload.substring(0, payload.length() - 1));
 		} finally{
 			if(dos != null) dos.close();
+		}
+	}
+	
+	/**
+	 * 根据URL获取图片
+	 * @return 不会为null，只要获取失败，就会抛出IOException;
+	 * */
+	public static Bitmap loadImageFromURL(String url) throws IOException{
+		URL imageURL = new URL(url);
+		HttpURLConnection conn = null;
+		InputStream is = null;
+		try{
+			conn = (HttpURLConnection) imageURL.openConnection();
+			is = conn.getInputStream();
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			Bitmap bitmap = BitmapFactory.decodeStream(is, null, options);
+
+			if(bitmap == null) throw new IOException("图片解码失败！");
+			
+			return bitmap;
+		}finally{
+			if(is != null){
+				try{
+					is.close();
+				}finally{
+					if(conn != null) conn.disconnect();
+				}
+			}
 		}
 	}
 }

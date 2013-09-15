@@ -20,8 +20,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
-import android.widget.TextView;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 
@@ -32,9 +34,6 @@ public class ChapterActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_chapter);
-		
-		listView = (ListView) findViewById(R.id.listview_chapter);
 		
 		Intent intent = getIntent();
 		url = intent.getStringExtra("IndexURL");
@@ -58,10 +57,16 @@ public class ChapterActivity extends Activity {
 	private class ListChapters extends AsyncTask<String, Integer, ArrayList<String[]>>{
 
 		@Override
+		protected void onPreExecute() {
+			setContentView(R.layout.loading);
+			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
+			processing.startAnimation(AnimationUtils.loadAnimation(ChapterActivity.this, R.drawable.processing));
+		}
+		
+		@Override
 		protected ArrayList<String[]> doInBackground(String... params) {
 			ArrayList<String[]> chapters = new ArrayList<String[]>();
 			
-			System.out.println("开始异步任务载入章节目录！");
 			URL indexUrl = null;
 			try {
 				indexUrl = new URL(params[0]);
@@ -145,20 +150,20 @@ public class ChapterActivity extends Activity {
 		protected void onPostExecute(final ArrayList<String[]> result) {
 			if(result == null){
 				//如果列表为空，载入失败，显示重试按钮
-				final TextView header = new TextView(ChapterActivity.this);
-				header.setText("载入章节目录失败，重试？");
-				header.setClickable(true);
-				listView.addHeaderView(header);
-				header.setOnClickListener(new OnClickListener() {
-					
+				setContentView(R.layout.button_center);
+				Button retry = (Button) findViewById(R.id.button_center);
+				retry.setText("载入目录失败，重试？");
+				retry.setOnClickListener(new OnClickListener() {
 					@Override
 					public void onClick(View v) {
 						new ListChapters().execute(url);
-						header.setClickable(false);
 					}
 				});
 				return;
 			}
+			
+			setContentView(R.layout.activity_chapter);
+			listView = (ListView) findViewById(R.id.listview_chapter);
 			
 			ChapterListAdapter adapter = new ChapterListAdapter(ChapterActivity.this, 
 					android.R.layout.simple_list_item_1, result);

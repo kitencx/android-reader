@@ -28,11 +28,11 @@ public class MainActivity extends Activity {
 	}
 
 	public void search(View view){
-		System.out.println("search");
 		Intent intent = new Intent(this, SearchResultActivity.class);
 		String keyword = mSearchBox.getText().toString();
 		intent.putExtra("keyword", keyword);
 		startActivity(intent);
 		overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 	}
+	
 }
