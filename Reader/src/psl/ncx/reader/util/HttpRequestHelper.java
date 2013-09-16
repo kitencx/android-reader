@@ -87,17 +87,29 @@ public class HttpRequestHelper {
 	 * 根据URL获取图片
 	 * @return 不会为null，只要获取失败，就会抛出IOException;
 	 * */
-	public static Bitmap loadImageFromURL(String url) throws IOException{
+	public static Bitmap loadURLImage(String url, String filename) throws IOException{
+		/*尝试从本地存储上加载该章节，如果有则直接返回*/
+		DataStorage store = new DataStorage();
+		Bitmap cache = store.loadImageFromFile(filename);
+		if(cache != null) return cache;
+		
+		/*本地存储没有该图片，从网络获取*/
 		URL imageURL = new URL(url);
 		HttpURLConnection conn = null;
 		InputStream is = null;
 		try{
 			conn = (HttpURLConnection) imageURL.openConnection();
 			is = conn.getInputStream();
-			BitmapFactory.Options options = new BitmapFactory.Options();
-			Bitmap bitmap = BitmapFactory.decodeStream(is, null, options);
-
+			Bitmap bitmap = BitmapFactory.decodeStream(is);
 			if(bitmap == null) throw new IOException("图片解码失败！");
+			//图片下载成功，缓存至本地目录
+			if(store.storeImage(bitmap, filename)){
+				//释放掉原来的图片资源
+				bitmap.recycle();
+				bitmap = null;
+				//重新载入本地图片
+				bitmap = store.loadImageFromFile(filename);
+			}
 			
 			return bitmap;
 		}finally{

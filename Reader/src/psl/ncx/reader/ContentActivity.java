@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.graphics.Point;
 import android.text.Html;
 import android.util.Log;
@@ -127,15 +126,7 @@ public class ContentActivity extends Activity {
 				}
 				//返回图片链接地址
 				try {
-					Bitmap src = HttpRequestHelper.loadImageFromURL(image.first().child(0).absUrl("src"));
-					//同比缩放图片
-					Matrix matrix = new Matrix();
-					float scale = ((float)screenSize.x) / src.getWidth();
-					matrix.postScale(scale, scale);
-					bitmap = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), matrix, true);
-					//释放原图片
-					src.recycle();
-					src = null;
+					bitmap = HttpRequestHelper.loadURLImage(image.first().child(0).absUrl("src"), chapters.get(position)[0]);
 					
 					return IMAGE_CONTENT;
 				} catch (IOException e) {
@@ -198,7 +189,7 @@ public class ContentActivity extends Activity {
 		maker = new PageMaker(Html.fromHtml(result).toString(), screenSize.x, screenSize.y, contentView.getPaint());
 		maker.setPadding(contentView.getPaddingLeft(), contentView.getPaddingTop(), 
 				contentView.getPaddingRight(), contentView.getPaddingBottom());
-		
+
 		//新章节载入，重置分页工具类状态
 		maker.reset();
 		//获取第一页，并显示
