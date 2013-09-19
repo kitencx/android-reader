@@ -1,0 +1,20 @@
+package psl.ncx.reader.model;
+
+import java.util.ArrayList;
+
+public class Book {
+	/**书名*/
+	public String bookName;
+	/**作者*/
+	public String author;
+	/**更新时间*/
+	public String updateTime;
+	/**最新章节*/
+	public String latestChapter;
+	/**简介*/
+	public String summary;
+	/**目录页链接*/
+	public String indexURL;
+	/**目录*/
+	public ArrayList<String[]> catalog;
+}

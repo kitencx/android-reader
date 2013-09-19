@@ -1,22 +1,17 @@
 package psl.ncx.reader;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
 import psl.ncx.reader.adapter.ChapterListAdapter;
-
+import psl.ncx.reader.constant.IntentConstant;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -30,13 +25,14 @@ import android.widget.ListView;
 public class ChapterActivity extends Activity {
 	private ListView listView;
 	private String url;
+	private String bookName;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
 		Intent intent = getIntent();
-		url = intent.getStringExtra("IndexURL");
+		bookName = intent.getStringExtra(IntentConstant.OPEN_BOOKNAME);
 		
 		new ListChapters().execute(url);
 	}
@@ -65,91 +61,37 @@ public class ChapterActivity extends Activity {
 		
 		@Override
 		protected ArrayList<String[]> doInBackground(String... params) {
-			ArrayList<String[]> chapters = new ArrayList<String[]>();
-			
-			URL indexUrl = null;
+			BufferedReader br = null;
 			try {
-				indexUrl = new URL(params[0]);
-			} catch (MalformedURLException e) {
-				Log.e("URL", "目录页网址错误，请检查！" + params[0]);
-				System.err.println("获取失败，检查目录页网址是否正确：" + params[0]);
-			}
-			
-			Document doc = null;
-			try {
-				doc = Jsoup.parse(indexUrl, 30000);
+				br = new BufferedReader(
+						new FileReader(ChapterActivity.this.getFilesDir() + File.separator + bookName));
+				ArrayList<String[]> chapters = new ArrayList<String[]>();
+				String data;
+				while((data = br.readLine()) != null){
+					String[] entry = data.split("=");
+					if(entry[0].matches("\\d+")){
+						int p = entry[1].lastIndexOf(",");
+						String title = entry[1].substring(0, p);
+						String curl = entry[1].substring(p + 1);
+						chapters.add(new String[]{title, curl});
+					}
+				}
+				return chapters;
+			} catch (FileNotFoundException e) {
 			} catch (IOException e) {
-				System.err.println("连接打开错误！" + e.getMessage());
 				e.printStackTrace();
-				return null;
+			} finally {
+				if(br != null)
+					try {br.close();} 
+					catch (IOException e) {}
 			}
-			
-			/*目录页有两种结构，一种为div.mod_container dl dd li，每个dd包含2个li，另一种为div.mod_container ul li*/
-			Elements contents = doc.select(".mod_container dl dd");
-			if(!contents.isEmpty()){
-				int size = contents.size();
-				for(int i = 0; i < size; i += 3){
-					Element dd1 = null, dd2 = null, dd3 = null;
-					if(i < size) dd1 = contents.get(i);
-					if((i + 1) < size) dd2 = contents.get(i + 1);
-					if((i + 2) < size) dd3 = contents.get(i + 2);
-					
-					for(int j = 0; j < 2; j++){
-						if(dd1 != null){
-							Element li = dd1.child(j);
-							Element a = li.select("a[href]").first();
-							if(a != null){
-								String chapterName = a.text();
-								String chapterUrl = a.absUrl("href");
-								chapters.add(new String[]{chapterName, chapterUrl});
-							}
-						}
-						
-						if(dd2 != null){
-							Element li = dd2.child(j);
-							Element a = li.select("a[href]").first();
-							if(a != null){
-								String chapterName = a.text();
-								String chapterUrl = a.absUrl("href");
-								chapters.add(new String[]{chapterName, chapterUrl});
-							}
-						}
-						
-						if(dd3 != null){
-							Element li = dd3.child(j);
-							Element a = li.select("a[href]").first();
-							if(a != null){
-								String chapterName = a.text();
-								String chapterUrl = a.absUrl("href");
-								chapters.add(new String[]{chapterName, chapterUrl});
-							}
-						}
-					}
-				}
-			}else{
-				contents = doc.select(".mod_container ul li");
-				int size = contents.size();
-				if(size != 0){
-					for(int i = 0; i < size; i++){
-						Element li = contents.get(i);
-						Element a = li.select("a[href]").first();
-						if(a != null){
-							String chapterName = a.text();
-							String chapterUrl = a.absUrl("href");
-							chapters.add(new String[]{chapterName, chapterUrl});
-						}
-					}
-				}
-			}
-			
-			
-			return chapters;
+			return null;
 		}
 		
 		@Override
 		protected void onPostExecute(final ArrayList<String[]> result) {
-			if(result == null){
-				//如果列表为空，载入失败，显示重试按钮
+			if(result == null || result.isEmpty()){
+				//如果列表为空，尝试网络载入
 				setContentView(R.layout.button_center);
 				Button retry = (Button) findViewById(R.id.button_center);
 				retry.setText("载入目录失败，重试？");
@@ -160,6 +102,12 @@ public class ChapterActivity extends Activity {
 					}
 				});
 				return;
+			}
+			for(String[] str:result){
+				for(int i=0; i<str.length;i++){
+					System.out.print(str[i] + ",");
+				}
+				System.out.println();
 			}
 			
 			setContentView(R.layout.activity_chapter);
@@ -175,8 +123,8 @@ public class ChapterActivity extends Activity {
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
 					Intent intent = new Intent(ChapterActivity.this, ContentActivity.class);
-					intent.putExtra("Position", position);
-					intent.putExtra("Chapters", result);
+					intent.putExtra(IntentConstant.OPEN_INDEX, position);
+					intent.putExtra(IntentConstant.CHAPTERS, result);
 					startActivity(intent);
 					overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 				}

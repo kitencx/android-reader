@@ -7,12 +7,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
+import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.util.HttpRequestHelper;
 import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -21,12 +23,11 @@ import android.text.Html;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.View.OnClickListener;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.View.OnTouchListener;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
@@ -39,6 +40,7 @@ public class ContentActivity extends Activity {
 	private final String IMAGE_CONTENT = "image_content";
 	private PagedView contentView;
 	private ScrollView scrollView;
+	private ActionBar mActionBar;
 	private Bitmap bitmap;
 	private ArrayList<String[]> chapters;
 	private int position;
@@ -52,12 +54,10 @@ public class ContentActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		//隐藏标题
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		//满屏显示
-		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-				WindowManager.LayoutParams.FLAG_FULLSCREEN);
-		
+		mActionBar = getActionBar();
+		mActionBar.setHomeButtonEnabled(true);
+		mActionBar.hide();
+
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 		
@@ -66,21 +66,39 @@ public class ContentActivity extends Activity {
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
-		position = intent.getIntExtra("Position", -1);
-		chapters = (ArrayList<String[]>)intent.getSerializableExtra("Chapters");
+		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, -1);
+		chapters = (ArrayList<String[]>)intent.getSerializableExtra(IntentConstant.CHAPTERS);
 		
 		new LoadContent().execute(chapters.get(position)[1]);
 	}
 	
 	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()){
+		case android.R.id.home:
+			this.finish();
+			break;
+		case R.id.action_catalog:
+			System.out.println("目录列表");
+			break;
+		}
+		return true;
+	}
+	
+	/**
+	 * 覆写该方法，使它每次返回的时候都回到书架
+	 * */
+	@Override
 	public void onBackPressed() {
-		super.onBackPressed();
+		Intent intent = new Intent(this, MainActivity.class);
+		//返回书架，必须设置Flag，否则只会新建一个MainActivity
+		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+		startActivity(intent);
 		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.content, menu);
 		return true;
 	}
@@ -219,6 +237,18 @@ public class ContentActivity extends Activity {
 	 * 手势检测，用于文本章节
 	 * */
 	private class FlipOverGestureForText extends SimpleOnGestureListener{
+		@Override
+		public boolean onSingleTapConfirmed(MotionEvent e) {
+			//点击显示ActionBar
+			Point center = new Point(screenSize.x/2, screenSize.y/2);
+			float x = e.getX();
+			float y = e.getY();
+			if(x > center.x - 50 && x < center.x + 50 && y > center.y - 50 && y < center.y + 50){
+				if(mActionBar.isShowing()) mActionBar.hide();
+				else mActionBar.show();
+			}
+			return true;
+		}
 		
 		@Override
 		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
@@ -257,6 +287,19 @@ public class ContentActivity extends Activity {
 	 * 手势检测，用于图片章节
 	 * */
 	private class FlipOverGestureForImage extends SimpleOnGestureListener{
+		@Override
+		public boolean onSingleTapConfirmed(MotionEvent e) {
+			//点击显示ActionBar
+			Point center = new Point(screenSize.x/2, screenSize.y/2);
+			float x = e.getX();
+			float y = e.getY();
+			if(x > center.x - 50 && x < center.x + 50 && y > center.y - 50 && y < center.y + 50){
+				if(mActionBar.isShowing()) mActionBar.hide();
+				else mActionBar.show();
+			}
+			return true;
+		}
+		
 		@Override
 		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
 				float velocityY) {

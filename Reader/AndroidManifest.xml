@@ -10,8 +10,8 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -20,7 +20,8 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name="psl.ncx.reader.MainActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:theme="@style/ActionBarOverlayTheme" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -37,7 +38,13 @@
         </activity>
         <activity
             android:name="psl.ncx.reader.ContentActivity"
-            android:label="@string/title_activity_content" >
+            android:label=""
+            android:icon="@drawable/navigation_back"
+            android:theme="@style/FullScreenWithActionBarOverlayTheme" >
+        </activity>
+        <activity
+            android:name="psl.ncx.reader.SummaryActivity"
+            android:label="@string/title_activity_summary" >
         </activity>
     </application>
 

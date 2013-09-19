@@ -18,32 +18,25 @@ import org.jsoup.select.Elements;
 
 import android.util.Log;
 
+import psl.ncx.reader.model.Book;
 import psl.ncx.reader.util.HttpRequestHelper;
 
 public class BookCollection {
+	private String error;
 	
 	/**
 	 * 搜索小说信息
 	 * @param keyword 搜索的关键字
 	 * @param charset POST请求过程中参数的编码类型
-	 * @return 符合查询条件的小说信息集合，每个String[]代表一本小说，包含有5个信息：
-	 * <ol>
-	 * 	<li>小说封面</li>
-	 * 	<li>书名</li>
-	 * 	<li>作者</li>
-	 * 	<li>最新章节</li>
-	 * 	<li>目录页URL</li>
-	 * </ol>
+	 * @return 符合查询条件的小说信息集合
 	 * */
-	public ArrayList<String[]> searchBookByKeyword(String keyword, String charset){
+	public ArrayList<Book> searchBookByKeyword(String keyword, String charset){
 		URL url = null;
 		HttpURLConnection conn = null;
 		try {
 			url = new URL("http://www.69zw.com/modules/article/search.php");
 		}catch (MalformedURLException e){
 			Log.e("URL", "URL格式无法解析，请检查！");
-			System.err.println("URL格式无法解析，请检查！");
-			e.printStackTrace();
 		}
 		
 		try{
@@ -61,35 +54,41 @@ public class BookCollection {
 			InputStream is = null;
 			try{
 				is = conn.getInputStream();
-				
-				//读取流
-				Document doc = Jsoup.parse(is, charset, "http://www.69zw.com");
-				
-				return resolvingDocument(doc);
-				
+				if(conn.getResponseCode() == 200){
+					//如果请求正常返回，则解析返回
+					Document doc = Jsoup.parse(is, charset, "http://www.69zw.com");
+					return resolvingDocument(doc);
+				}
 			} finally{
 				if(is != null) is.close();
 			}
-			
 		} catch (UnsupportedEncodingException e) {
-			System.out.println("编码类型错误，不支持编码类型：" + e.getMessage());
-			e.printStackTrace();
+			System.err.println("编码类型错误，不支持编码类型：" + e.getMessage());
 		} catch (ProtocolException e) {
-			System.out.println("协议错误，不支持请求方式：" + e.getMessage());
-			e.printStackTrace();
+			System.err.println("协议错误，不支持请求方式：" + e.getMessage());
 		} catch (IOException e) {
 			System.out.println("连接错误，请检查网址！");
-			e.printStackTrace();
+			error = e.getMessage();
 		} finally{
 			if(conn != null) conn.disconnect();
 		}
 
-		return new ArrayList<String[]>();
+		return null;
 	}
-	
-	public ArrayList<String[]> resolvingDocument(Document doc){
-		ArrayList<String[]> bookList = new ArrayList<String[]>();
+	/**
+	 * 解析当前网页，提取出书籍信息
+	 * <p>搜索结果网页有两种情况：</p>
+	 * <ul>
+	 * 	<li>搜索结果有0本或者超过1本书籍符合条件，则会转到search.php页面，页面包含一个表格，列出匹配的书籍内容</li>
+	 * 	<li>搜索结果有且只有1本书籍符合条件，则会转跳到该书籍的简介页面</li>
+	 * </ul>
+	 * @param doc 当前解析的网页
+	 * @return 搜索结果，书籍的列表
+	 * */
+	public ArrayList<Book> resolvingDocument(Document doc){
+		ArrayList<Book> bookList = new ArrayList<Book>();
 		
+		//查看是否存在class=grid的table，有就取得所有行，没有则表示当前书籍简介页面
 		Elements rows = doc.select("table.grid tr");
 		if(rows.size() > 1){
 			for(int i = 1; i < rows.size(); i++){
@@ -98,7 +97,12 @@ public class BookCollection {
 				String author = row.child(2).text();
 				String latestChapter = row.child(1).text();
 				String indexUrl = row.child(1).child(0).absUrl("href");
-				bookList.add(new String[]{String.valueOf(i), bookName, author, latestChapter, indexUrl});
+				Book book = new Book();
+				book.bookName = bookName;
+				book.author = author;
+				book.latestChapter = latestChapter;
+				book.indexURL = indexUrl;
+				bookList.add(book);
 			}
 		}else{
 			Element startRead = doc.select(".btopt").first();
@@ -108,15 +112,23 @@ public class BookCollection {
 				String author = contents[1].trim();
 				String latestChapter = doc.select(".newupdate ul li a").first().text();
 				String indexUrl = startRead.child(0).absUrl("href");
-				bookList.add(new String[]{"1", bookName, author, latestChapter, indexUrl});
+				Book book = new Book();
+				book.bookName = bookName;
+				book.author = author;
+				book.latestChapter = latestChapter;
+				book.indexURL = indexUrl;
+				bookList.add(book);
 			}
 		}
-		
 		
 		return bookList;
 	}
 	
-	public static void main(String args[]){
-		new BookCollection().searchBookByKeyword("首席御医", "GBK");
+	/**
+	 * 如果searchBookByKeyword返回null，则可调用此方法查看失败原因
+	 * @return 失败原因
+	 * */
+	public String checkError(){
+		return error;
 	}
 }

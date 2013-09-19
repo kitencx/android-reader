@@ -1,0 +1,64 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:orientation="vertical"
+    tools:context=".SummaryActivity" >
+
+    <LinearLayout 
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        
+        <ImageView 
+            android:id="@+id/imageview_cover"
+            android:layout_width="82dp"
+            android:layout_height="102dp"
+            android:contentDescription="@string/cover_description"/>
+        
+        <LinearLayout 
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            
+            <TextView 
+                android:id="@+id/textview_bookname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"/>
+            
+            <TextView 
+                android:id="@+id/textview_author"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+            
+			<Button 
+		        android:id="@+id/button_collect"
+		        android:layout_width="wrap_content"
+		        android:layout_height="wrap_content"
+		        android:text="@string/button_collect"/>
+            
+        </LinearLayout>
+        
+    </LinearLayout>
+    
+    <TextView 
+        android:id="@+id/textview_updatetime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView 
+        android:id="@+id/textview_latestchapter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+    
+    <TextView 
+        android:id="@+id/textview_summary"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+    
+</LinearLayout>

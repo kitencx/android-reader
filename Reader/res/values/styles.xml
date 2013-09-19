@@ -16,5 +16,14 @@
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
     </style>
-
+    
+    <style name="ActionBarOverlayTheme" parent="AppBaseTheme">
+        <item name="android:windowActionBarOverlay">true</item>
+    </style>
+    
+    <style name="FullScreenWithActionBarOverlayTheme" parent="AppBaseTheme">
+        <item name="android:windowActionBarOverlay">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+    
 </resources>

@@ -3,6 +3,7 @@ package psl.ncx.reader.adapter;
 import java.util.ArrayList;
 
 import psl.ncx.reader.R;
+import psl.ncx.reader.model.Book;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,9 +18,9 @@ public class BookListAdapter extends BaseAdapter {
 	/*显示布局*/
 	private int layout;
 	/*显示数据*/
-	private ArrayList<String[]> bookList;
+	private ArrayList<Book> bookList;
 	
-	public BookListAdapter(Context context, int layout, ArrayList<String[]> bookList){
+	public BookListAdapter(Context context, int layout, ArrayList<Book> bookList){
 		this.context = context;
 		this.layout = layout;
 		this.bookList = bookList;
@@ -27,19 +28,16 @@ public class BookListAdapter extends BaseAdapter {
 
 	@Override
 	public int getCount() {
-		// TODO Auto-generated method stub
 		return bookList.size();
 	}
 
 	@Override
-	public String[] getItem(int position) {
-		// TODO Auto-generated method stub
+	public Book getItem(int position) {
 		return bookList.get(position);
 	}
 
 	@Override
 	public long getItemId(int position) {
-		// TODO Auto-generated method stub
 		return position;
 	}
 
@@ -54,9 +52,10 @@ public class BookListAdapter extends BaseAdapter {
 		TextView date = (TextView)convertView.findViewById(R.id.text_date);
 		
 		cover.setImageResource(R.drawable.ic_launcher);
-		bookName.setText("书名：" + getItem(position)[1]);
-		author.setText("作者：" + getItem(position)[2]);
-		date.setText("最新章节：" + getItem(position)[3]);
+		Book book = getItem(position);
+		bookName.setText("书名：" + book.bookName);
+		author.setText("作者：" + book.author);
+		date.setText("最新章节：" + book.latestChapter);
 		
 		return convertView;
 	}
