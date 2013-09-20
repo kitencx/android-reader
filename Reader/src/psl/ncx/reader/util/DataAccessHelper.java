@@ -1,13 +1,14 @@
 package psl.ncx.reader.util;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-
 import psl.ncx.reader.model.Book;
 
 import android.content.Context;
@@ -80,5 +81,40 @@ public class DataAccessHelper {
 				return false;
 			}
 		});
+	}
+	
+	/**
+	 * 从指定文件中载入书籍目录信息
+	 * @param context
+	 * @param filename 文件名
+	 * @return 目录信息，每个String[]包含章节名和章节内容URL
+	 * */
+	public static ArrayList<String[]> loadCatalogFromFile(Context context, String filename){
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new FileReader(context.getFilesDir() + File.separator + filename));
+			ArrayList<String[]> chapters = new ArrayList<String[]>();
+			String line;
+			while((line = br.readLine()) != null){
+				if(line.matches("\\d+=.+,http://.+")){
+					String chapter = line.substring(line.indexOf("=") + 1);
+					int splitPoint = chapter.lastIndexOf(",");
+					String title = chapter.substring(0, splitPoint);
+					String url = chapter.substring(splitPoint + 1);
+					chapters.add(new String[]{title, url});
+				}
+			}
+			return chapters;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if(br != null){
+				try {br.close();}
+				catch (IOException e){} 
+			}
+		}
+		return null;
 	}
 }

@@ -75,9 +75,11 @@ public class MainActivity extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				String bookname = (String) parent.getItemAtPosition(position);
-				Intent intent = new Intent(MainActivity.this, ChapterActivity.class);
+				Intent intent = new Intent(MainActivity.this, ContentActivity.class);
+				intent.putExtra(IntentConstant.OPEN_INDEX, 0);
 				intent.putExtra(IntentConstant.OPEN_BOOKNAME, bookname);
 				startActivity(intent);
+				overridePendingTransition(R.anim.in_from_bottom, R.anim.out_to_top);
 			}
 		});
 		/**长按删除指定书籍*/
@@ -112,7 +114,8 @@ public class MainActivity extends Activity {
 		mSearchView.setOnQueryTextListener(new OnQueryTextListener() {
 			@Override
 			public boolean onQueryTextSubmit(String query) {
-				//转跳到查询页
+				//隐藏搜索栏，并转跳到查询页
+				mActionBar.hide();
 				Intent intent = new Intent(MainActivity.this, SearchResultActivity.class);
 				intent.putExtra(IntentConstant.SEARCH_KEYWORD, query);
 				startActivity(intent);

@@ -8,6 +8,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import psl.ncx.reader.constant.IntentConstant;
+import psl.ncx.reader.util.DataAccessHelper;
 import psl.ncx.reader.util.HttpRequestHelper;
 import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
@@ -20,7 +21,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.text.Html;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,6 +43,7 @@ public class ContentActivity extends Activity {
 	private ActionBar mActionBar;
 	private Bitmap bitmap;
 	private ArrayList<String[]> chapters;
+	private String bookname;
 	private int position;
 	private PageMaker maker;
 	private PageDownListener listener;
@@ -66,10 +67,11 @@ public class ContentActivity extends Activity {
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
-		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, -1);
+		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, 0);
+		bookname = intent.getStringExtra(IntentConstant.OPEN_BOOKNAME);
 		chapters = (ArrayList<String[]>)intent.getSerializableExtra(IntentConstant.CHAPTERS);
 		
-		new LoadContent().execute(chapters.get(position)[1]);
+		new LoadContent().execute(position);
 	}
 	
 	@Override
@@ -77,12 +79,31 @@ public class ContentActivity extends Activity {
 		switch(item.getItemId()){
 		case android.R.id.home:
 			this.finish();
+			overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 			break;
 		case R.id.action_catalog:
-			System.out.println("目录列表");
+			mActionBar.hide();
+			Intent intent = new Intent(this, ChapterActivity.class);
+			intent.putExtra(IntentConstant.CHAPTERS, chapters);
+			startActivityForResult(intent, 0);
+			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
 			break;
 		}
 		return true;
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch(requestCode){
+		case 0:
+			switch(resultCode){
+			case Activity.RESULT_OK:
+				position = data.getIntExtra(IntentConstant.OPEN_INDEX, 0);
+				new LoadContent().execute(position);
+				break;
+			}
+			break;
+		}
 	}
 	
 	/**
@@ -94,7 +115,7 @@ public class ContentActivity extends Activity {
 		//返回书架，必须设置Flag，否则只会新建一个MainActivity
 		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		startActivity(intent);
-		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
+		overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 	}
 
 	@Override
@@ -106,8 +127,7 @@ public class ContentActivity extends Activity {
 	/**
 	 * 异步任务，获取章节内容
 	 * */
-	private class LoadContent extends AsyncTask<String, Integer, String>{
-
+	private class LoadContent extends AsyncTask<Integer, Void, String>{
 		@Override
 		protected void onPreExecute() {
 			//新任务启动，释放当前的图片内容
@@ -122,30 +142,30 @@ public class ContentActivity extends Activity {
 		}
 		
 		@Override
-		protected String doInBackground(String... params) {
-			String url = params[0];
+		protected String doInBackground(Integer... params) {
+			if(chapters == null){
+				//没有提供章节信息，先读入章节
+				chapters = DataAccessHelper.loadCatalogFromFile(ContentActivity.this, bookname);
+			}
+			int cp = params[0];
+			String url = chapters.get(cp)[1];
 			Document doc = null;
 			try {
 				doc = Jsoup.connect(url).get();
 			} catch (IOException e) {
-				Log.e("Content", "载入章节内容失败：" + e.getMessage());
+				e.printStackTrace();
 				return CONNECT_FAILED;
 			}
 			
 			Elements content = doc.select(".novel_content");
-			if(content.isEmpty()){
-				return RESOLVE_FAILED;
-			}else{
-				//检查是否图片章节
+			//解析不到内容
+			if(content.isEmpty()) return RESOLVE_FAILED;
+			else{
 				Elements image = content.select(".divimage");
-				if(image.isEmpty()){
-					//不是图片
-					return content.first().html();
-				}
-				//返回图片链接地址
+				if(image.isEmpty())	return content.first().html();
+				//图片显示
 				try {
 					bitmap = HttpRequestHelper.loadURLImage(image.first().child(0).absUrl("src"), chapters.get(position)[0]);
-					
 					return IMAGE_CONTENT;
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -178,7 +198,7 @@ public class ContentActivity extends Activity {
 		retry.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				new LoadContent().execute(chapters.get(position)[1]);
+				new LoadContent().execute(position);
 			}
 		});
 	}
@@ -260,7 +280,7 @@ public class ContentActivity extends Activity {
 					contentView.setContent(page);
 				}else{
 					if(position - 1 >= 0){
-						new LoadContent().execute(chapters.get(--position)[1]);
+						new LoadContent().execute(--position);
 						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
 						contentView.setOnTouchListener(null);
 					}
@@ -271,7 +291,7 @@ public class ContentActivity extends Activity {
 				if(page != null)	contentView.setContent(page);
 				else{
 					if(position + 1 < chapters.size()){
-						new LoadContent().execute(chapters.get(++position)[1]);
+						new LoadContent().execute(++position);
 						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
 						contentView.setOnTouchListener(null);
 					}
@@ -305,12 +325,12 @@ public class ContentActivity extends Activity {
 				float velocityY) {
 			if(e2.getX() - e1.getX() > 100){
 				if(position - 1 > 0){
-					new LoadContent().execute(chapters.get(--position)[1]);
+					new LoadContent().execute(--position);
 					scrollView.setOnTouchListener(null);
 				}
 			}else if(e1.getX() - e2.getX() > 100){
 				if(position + 1 < chapters.size()){
-					new LoadContent().execute(chapters.get(++position)[1]);
+					new LoadContent().execute(++position);
 					scrollView.setOnTouchListener(null);
 				}
 			}

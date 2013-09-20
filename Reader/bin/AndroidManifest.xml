@@ -30,17 +30,18 @@
         </activity>
         <activity
             android:name="psl.ncx.reader.SearchResultActivity"
-            android:label="@string/title_activity_search_result" >
+            android:label="@string/title_activity_search_result">
         </activity>
         <activity
             android:name="psl.ncx.reader.ChapterActivity"
-            android:label="@string/title_activity_chapter" >
+            android:label="@string/title_activity_chapter"
+            android:theme="@style/FullscreenTheme" >
         </activity>
         <activity
             android:name="psl.ncx.reader.ContentActivity"
             android:label=""
             android:icon="@drawable/navigation_back"
-            android:theme="@style/FullScreenWithActionBarOverlayTheme" >
+            android:theme="@style/FullscreenActionBarTheme" >
         </activity>
         <activity
             android:name="psl.ncx.reader.SummaryActivity"

@@ -200,6 +200,7 @@ public class SummaryActivity extends Activity {
 						//点击开始阅读
 						Intent intent = new Intent(SummaryActivity.this, ContentActivity.class);
 						intent.putExtra(IntentConstant.OPEN_INDEX, 0);
+						intent.putExtra(IntentConstant.OPEN_BOOKNAME, book.bookName);
 						intent.putExtra(IntentConstant.CHAPTERS, result);
 						SummaryActivity.this.finish();
 						startActivity(intent);
