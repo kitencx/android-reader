@@ -1,11 +1,14 @@
 package psl.ncx.reader;
 
+import java.util.ArrayList;
+
+import psl.ncx.reader.adapter.BookShelfAdapter;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.util.DataAccessHelper;
-import android.os.Bundle;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -15,7 +18,6 @@ import android.view.View.OnTouchListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.SearchView;
@@ -74,7 +76,7 @@ public class MainActivity extends Activity {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				String bookname = (String) parent.getItemAtPosition(position);
+				String bookname = ((String[]) parent.getItemAtPosition(position))[1];
 				Intent intent = new Intent(MainActivity.this, ContentActivity.class);
 				intent.putExtra(IntentConstant.OPEN_INDEX, 0);
 				intent.putExtra(IntentConstant.OPEN_BOOKNAME, bookname);
@@ -87,11 +89,12 @@ public class MainActivity extends Activity {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				String bookname = (String) parent.getItemAtPosition(position);
+				String bookname = ((String[]) parent.getItemAtPosition(position))[1];
 				deleteFile(bookname);
 				return true;
 			}
 		});
+		
 	}
 	
 	@Override
@@ -99,8 +102,11 @@ public class MainActivity extends Activity {
 		super.onStart();
 		//检索目录，查看是否有新增书籍
 		String[] books = DataAccessHelper.listBooksName(this);
-		mGrid.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,
-				books));
+		ArrayList<String[]> data = new ArrayList<String[]>();
+		for(int i = 0; i < books.length; i++){
+			data.add(new String[]{String.valueOf(R.drawable.cover), books[i]});
+		}
+		mGrid.setAdapter(new BookShelfAdapter(this, data));
 	}
 	
 	@Override
