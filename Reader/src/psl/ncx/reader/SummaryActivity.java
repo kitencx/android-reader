@@ -12,6 +12,7 @@ import psl.ncx.reader.async.LoadChapter;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.util.DataAccessHelper;
+import psl.ncx.reader.util.HttpRequestHelper;
 import psl.ncx.reader.util.URLValidator;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -48,6 +49,15 @@ public class SummaryActivity extends Activity {
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.summary, menu);
 		return true;
+	}
+	
+	@Override
+	protected void onDestroy() {
+		if(book.cover != null){
+			book.cover.recycle();
+			book.cover = null;
+		}
+		super.onDestroy();
 	}
 	
 	/**
@@ -129,6 +139,14 @@ public class SummaryActivity extends Activity {
 			/****************最新章节******************************/
 			infos = doc.select(".newupdate ul li a");
 			outBook.latestChapter = infos.text();
+			/****************封面**********************************/
+			infos = doc.select(".coverleft a img");
+			if(!infos.isEmpty()){
+				try {
+					book.cover = HttpRequestHelper.loadImageFromURL(SummaryActivity.this,
+							infos.first().absUrl("src"), null);
+				} catch (IOException e) {}
+			}
 		}
 		
 		/**
@@ -152,6 +170,7 @@ public class SummaryActivity extends Activity {
 		 * */
 		private void showSummary(Book result){
 			setContentView(R.layout.activity_summary);
+			ImageView imageCover = (ImageView)findViewById(R.id.imageview_cover);
 			TextView textBookName = (TextView) findViewById(R.id.textview_bookname);
 			TextView textAuthor = (TextView)findViewById(R.id.textview_author);
 			mCollect = (Button)findViewById(R.id.button_collect);
@@ -159,6 +178,7 @@ public class SummaryActivity extends Activity {
 			TextView textLatestChapter = (TextView)findViewById(R.id.textview_latestchapter);
 			TextView textSummary = (TextView)findViewById(R.id.textview_summary);
 			
+			imageCover.setImageBitmap(result.cover);
 			textBookName.setText(result.bookName);
 			textAuthor.setText(result.author);
 			textUpdateTime.setText(result.updateTime);

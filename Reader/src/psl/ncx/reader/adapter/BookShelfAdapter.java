@@ -1,19 +1,20 @@
 package psl.ncx.reader.adapter;
 
 import java.util.ArrayList;
-
+import psl.ncx.reader.R;
 import psl.ncx.reader.views.CoverView;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 
 public class BookShelfAdapter extends BaseAdapter {
 	private Context context;
-	private ArrayList<String[]> books;
+	private ArrayList<Object[]> books;
 	
-	public BookShelfAdapter(Context context, ArrayList<String[]> data){
+	public BookShelfAdapter(Context context, ArrayList<Object[]> data){
 		this.context = context;
 		this.books = data;
 	}
@@ -24,7 +25,7 @@ public class BookShelfAdapter extends BaseAdapter {
 	}
 
 	@Override
-	public String[] getItem(int position) {
+	public Object[] getItem(int position) {
 		return books.get(position);
 	}
 
@@ -42,9 +43,14 @@ public class BookShelfAdapter extends BaseAdapter {
 		}else{
 			cover = (CoverView)convertView;
 		}
-		String bookname = getItem(position)[1];
+		String bookname = (String) getItem(position)[0];
 		cover.setTitle(bookname.substring(0, bookname.lastIndexOf('.')));
-		cover.setImageResource(Integer.parseInt(getItem(position)[0]));
+		Object coverimg = getItem(position)[1];
+		if(coverimg != null){
+			cover.setImageBitmap((Bitmap)coverimg);
+		}else{
+			cover.setImageResource(R.drawable.cover);
+		}
 		
 		return cover;
 	}

@@ -2,6 +2,8 @@ package psl.ncx.reader.model;
 
 import java.util.ArrayList;
 
+import android.graphics.Bitmap;
+
 public class Book {
 	/**书名*/
 	public String bookName;
@@ -17,4 +19,6 @@ public class Book {
 	public String indexURL;
 	/**目录*/
 	public ArrayList<String[]> catalog;
+	/**封面图片*/
+	public Bitmap cover;
 }

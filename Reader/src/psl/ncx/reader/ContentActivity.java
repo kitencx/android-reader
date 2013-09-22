@@ -78,12 +78,15 @@ public class ContentActivity extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch(item.getItemId()){
 		case android.R.id.home:
-			this.finish();
+			Intent intent = new Intent(this, MainActivity.class);
+			//返回书架，必须设置Flag，否则只会新建一个MainActivity
+			intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+			startActivity(intent);
 			overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 			break;
 		case R.id.action_catalog:
 			mActionBar.hide();
-			Intent intent = new Intent(this, ChapterActivity.class);
+			intent = new Intent(this, ChapterActivity.class);
 			intent.putExtra(IntentConstant.CHAPTERS, chapters);
 			startActivityForResult(intent, 0);
 			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
@@ -165,7 +168,9 @@ public class ContentActivity extends Activity {
 				if(image.isEmpty())	return content.first().html();
 				//图片显示
 				try {
-					bitmap = HttpRequestHelper.loadURLImage(image.first().child(0).absUrl("src"), chapters.get(position)[0]);
+					String imgsrc = image.first().child(0).absUrl("src");
+					String cachename = bookname + "@" + chapters.get(position)[0];
+					bitmap = HttpRequestHelper.loadImageFromURL(ContentActivity.this, imgsrc, cachename);
 					return IMAGE_CONTENT;
 				} catch (IOException e) {
 					e.printStackTrace();

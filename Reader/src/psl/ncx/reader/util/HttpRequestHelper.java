@@ -11,6 +11,7 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.Map;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
@@ -84,13 +85,15 @@ public class HttpRequestHelper {
 	}
 	
 	/**
-	 * 根据URL获取图片
+	 * 根据URL获取图片，并且缓存至本地
+	 * @param context
+	 * @param url 图片src属性
+	 * @param filename 缓存的文件名，如果为null，则不缓存
 	 * @return 不会为null，只要获取失败，就会抛出IOException;
 	 * */
-	public static Bitmap loadURLImage(String url, String filename) throws IOException{
+	public static Bitmap loadImageFromURL(Context context, String url, String filename) throws IOException{
 		/*尝试从本地存储上加载该章节，如果有则直接返回*/
-		DataStorage store = new DataStorage();
-		Bitmap cache = store.loadImageFromFile(filename);
+		Bitmap cache = DataAccessHelper.loadImageFromCache(context, filename);
 		if(cache != null) return cache;
 		
 		/*本地存储没有该图片，从网络获取*/
@@ -103,14 +106,15 @@ public class HttpRequestHelper {
 			Bitmap bitmap = BitmapFactory.decodeStream(is);
 			if(bitmap == null) throw new IOException("图片解码失败！");
 			//图片下载成功，缓存至本地目录
-			if(store.storeImage(bitmap, filename)){
-				//释放掉原来的图片资源
-				bitmap.recycle();
-				bitmap = null;
-				//重新载入本地图片
-				bitmap = store.loadImageFromFile(filename);
+			if(filename != null){
+				if(DataAccessHelper.storeImage(context, bitmap, filename)){
+					//释放掉原来的图片资源
+					bitmap.recycle();
+					bitmap = null;
+					//重新载入本地图片
+					bitmap = DataAccessHelper.loadImageFromCache(context, filename);
+				}
 			}
-			
 			return bitmap;
 		}finally{
 			if(is != null){

@@ -2,6 +2,7 @@ package psl.ncx.reader.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -12,6 +13,9 @@ import java.util.ArrayList;
 import psl.ncx.reader.model.Book;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Log;
 
 /**
  * 数据读写辅助类，提供了各种静态方法用于文件的CRUD操作
@@ -44,43 +48,64 @@ public class DataAccessHelper {
 	public static boolean store(Context context, Book book){
 		FileOutputStream fos = null;
 		PrintWriter writer = null;
-		try {
-			fos = context.openFileOutput(book.bookName + ".txt", Context.MODE_PRIVATE);
-			writer = new PrintWriter(fos, true);
-			writer.write("INDEX_URL=" + book.indexURL + "\n");
-			if(book.catalog != null){
+		if(book.catalog != null){
+			try {
+				fos = context.openFileOutput(book.bookName + ".txt", Context.MODE_PRIVATE);
+				writer = new PrintWriter(fos, true);
+				writer.write("INDEX_URL=" + book.indexURL + "\n");
 				ArrayList<String[]> catalog = book.catalog;
 				int size = book.catalog.size();
 				for(int i = 0; i < size; i++){
 					writer.write(i + "=" + catalog.get(i)[0] + "," + catalog.get(i)[1] + "\n");
-					if(writer.checkError()) System.out.println("写入文件发生错误！");
+					if(writer.checkError()){
+						Log.e("Store", "保存目录时发生错误！");
+						return false;
+					}
 				}
-				return true;
+			} catch (FileNotFoundException e) {
+			} finally {
+				if(fos != null){
+					try {fos.close();}
+					catch (IOException e){}
+					finally {if(writer != null) writer.close();}
+				}
 			}
-		} catch (FileNotFoundException e) {
-			// 忽略，因为openFileOutput()会创建文件，不会抛出此异常
-		} finally {
-			if(fos != null)
-				try{fos.close();}
-				catch (IOException e){}
-			if(writer != null) writer.close();
 		}
-		return false;
+		
+		if(book.cover != null){
+			try {
+				fos = context.openFileOutput(book.bookName + "@cover.png", Context.MODE_PRIVATE);
+				book.cover.compress(Bitmap.CompressFormat.PNG, 0, fos);
+			} catch (FileNotFoundException e) {
+			} finally {
+				if(fos != null)
+					try {fos.close();} 
+					catch (IOException e) {}
+			}
+		}
+		
+		return true;
 	}
 	
 	/**
 	 * 列出该app下所有.txt文件
 	 * @return 所有文件的文件名数组
 	 * */
-	public static String[] listBooksName(Context context){
+	public static ArrayList<Object[]> loadBooks(Context context){
+		ArrayList<Object[]> shelfdata = new ArrayList<Object[]>();
 		File dir = context.getFilesDir();
-		return dir.list(new FilenameFilter() {
+		String[] books = dir.list(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String filename) {
 				if(filename.endsWith(".txt")) return true;
 				return false;
 			}
 		});
+		for(int i = 0; i < books.length; i++){
+			Object[] o = new Object[]{books[i], loadCoverImage(context, books[i])};
+			shelfdata.add(o);
+		}
+		return shelfdata;
 	}
 	
 	/**
@@ -113,6 +138,90 @@ public class DataAccessHelper {
 			if(br != null){
 				try {br.close();}
 				catch (IOException e){} 
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * 缓存图片
+	 * @param bitmap 缓存的图片
+	 * @param filename 缓存的文件名
+	 * @return 标识缓存结果，ture为成功
+	 * */
+	public static boolean storeImage(Context context, Bitmap bitmap, String filename){
+		File cachePath = context.getCacheDir();
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(cachePath.getPath() + File.separator + filename);
+			return bitmap.compress(Bitmap.CompressFormat.PNG, 0, fos);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			if(fos != null){
+				try {fos.close();}
+				catch (IOException e){}
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * 从系统Cache文件夹中取出指定的图片
+	 * @param context
+	 * @param filename 图片文件名，命名规则是：书名@章节名.png
+	 * @return 失败则返回null
+	 * */
+	public static Bitmap loadImageFromCache(Context context, String filename){
+		File cachePath = context.getCacheDir();
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(cachePath.getPath() + File.separator + filename);
+			BitmapFactory.Options opts = new BitmapFactory.Options();
+			opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
+			Bitmap bitmap = BitmapFactory.decodeStream(fis, null, opts);
+			return bitmap;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			if(fis != null){
+				try {fis.close();}
+				catch (IOException e){}
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * 载入指定图书的封面
+	 * @param context
+	 * @param bookname 书名
+	 * @return 如果失败则返回null
+	 * */
+	public static Bitmap loadCoverImage(Context context, String bookname){
+		int extp = bookname.lastIndexOf(".");
+		bookname = bookname.substring(0, extp==-1?bookname.length():extp);
+		FileInputStream fis = null;
+		try {
+			fis = context.openFileInput(bookname + "@cover.png");
+			Bitmap src = BitmapFactory.decodeStream(fis);
+			if(src != null){
+				if(src.getWidth() == 200 && src.getHeight() == 250){
+					return src;
+				}else{
+					Bitmap cover = Bitmap.createScaledBitmap(src, 200, 250, true);
+					src.recycle();
+					src = null;
+					return cover;
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			if(fis != null){
+				try {fis.close();}
+				catch (IOException e){}
 			}
 		}
 		return null;
