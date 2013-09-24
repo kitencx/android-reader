@@ -24,6 +24,8 @@
         android:verticalSpacing="20dp"
         android:numColumns="3"
         android:gravity="fill"
+        android:drawSelectorOnTop="true"
+        android:listSelector="@drawable/selector_gridview"
         android:visibility="gone"></GridView>
 	
 </LinearLayout>

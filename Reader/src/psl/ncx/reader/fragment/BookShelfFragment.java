@@ -8,7 +8,11 @@ import psl.ncx.reader.adapter.BookShelfAdapter;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.util.DataAccessHelper;
 import android.app.ActionBar;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.app.Fragment;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,6 +28,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 public class BookShelfFragment extends Fragment {
 	private GridView mGrid;
@@ -36,13 +41,12 @@ public class BookShelfFragment extends Fragment {
 		View fragment = inflater.inflate(R.layout.fragment_bookshelf, container, false);
 		
 		mActionBar = getActivity().getActionBar();
-		
+
 		mGrid = (GridView) fragment.findViewById(R.id.gridview);
 		mGrid.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				System.out.println(view.getClass().getName());
 				Object[] o = (Object[]) parent.getItemAtPosition(position);
 				String bookname = (String) o[0];
 				Intent intent = new Intent(getActivity(), ContentActivity.class);
@@ -56,9 +60,26 @@ public class BookShelfFragment extends Fragment {
 			public boolean onItemLongClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				Object[] o = (Object[]) parent.getItemAtPosition(position);
-				String bookname = (String) o[0];
-				getActivity().deleteFile(bookname);
-				getActivity().deleteFile(bookname.substring(0, bookname.lastIndexOf('.')) + "@cover.png");
+				final String bookname = (String) o[0];
+				AlertDialog.Builder builder = new Builder(getActivity(), R.style.SimpleDialogTheme);
+				builder.setMessage("删除《" + bookname + "》？")
+				.setNegativeButton("删除", new OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						getActivity().deleteFile(bookname);
+						getActivity().deleteFile(bookname.substring(0, bookname.lastIndexOf('.')) + "@cover.png");
+						getActivity().deleteFile(bookname.substring(0, bookname.lastIndexOf('.')) + ".bookmark");
+						Toast.makeText(getActivity(), "《" + bookname + "》删除成功！", Toast.LENGTH_SHORT).show();
+						new LoadBookShelf().execute();
+						dialog.dismiss();
+					}
+				})
+				.setPositiveButton("取消", new OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+					}
+				}).show();
 				return true;
 			}
 		});

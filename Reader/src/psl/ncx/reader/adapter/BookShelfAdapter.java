@@ -1,9 +1,9 @@
 package psl.ncx.reader.adapter;
 
 import java.util.ArrayList;
+
 import psl.ncx.reader.R;
 import psl.ncx.reader.views.CoverView;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.view.View;
@@ -39,7 +39,6 @@ public class BookShelfAdapter extends BaseAdapter {
 		CoverView cover;
 		if(convertView == null){
 			cover = new CoverView(context);
-			cover.setPadding(2, 2, 2, 2);
 			cover.setAdjustViewBounds(true);
 		}else{
 			cover = (CoverView)convertView;
@@ -55,5 +54,4 @@ public class BookShelfAdapter extends BaseAdapter {
 		
 		return cover;
 	}
-
 }

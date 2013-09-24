@@ -2,5 +2,6 @@
 <resources>
     <color name="darkblue">#25649F</color>
     <color name="black">#000000</color>
-    <color name="transparent">#e0000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="semitransparent">#40000000</color>
 </resources>

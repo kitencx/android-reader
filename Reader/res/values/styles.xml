@@ -29,4 +29,9 @@
 		<item name="android:windowActionBarOverlay">true</item>
     </style>
     
+    <style name="SimpleDialogTheme" parent="@android:style/Theme.Dialog">
+		<item name="android:windowNoTitle">true</item>
+		<item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+    
 </resources>
