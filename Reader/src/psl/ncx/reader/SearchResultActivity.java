@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.animation.AnimationUtils;
@@ -32,6 +33,8 @@ public class SearchResultActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
+		getActionBar().setHomeButtonEnabled(true);
+		
 		Intent intent = getIntent();
 		keyword = intent.getStringExtra(IntentConstant.SEARCH_KEYWORD);
 		//载入数据
@@ -39,15 +42,26 @@ public class SearchResultActivity extends Activity {
 	}
 
 	@Override
-	public void onBackPressed() {
-		super.onBackPressed();
-		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
-	}
-	
-	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.search_result, menu);
 		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()){
+		case android.R.id.home:
+			this.finish();
+			overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
+			break;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	public void onBackPressed() {
+		super.onBackPressed();
+		overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 	}
 
 	/**
@@ -93,16 +107,14 @@ public class SearchResultActivity extends Activity {
 			/*搜索成功*/
 			setContentView(R.layout.activity_search_result);
 			listView = (ListView) findViewById(R.id.listview_result);
-			TextView header = new TextView(SearchResultActivity.this);
 			if(result.isEmpty()){
+				TextView header = new TextView(SearchResultActivity.this);
 				header.setText("很不幸，没有匹配的结果！");
-			}else{
-				header.setText("搜索结果");
+				listView.addHeaderView(header, null, false);
 			}
-
+			
 			BookListAdapter adapter = new BookListAdapter(SearchResultActivity.this, R.layout.listitem_booklist, result);
 			
-			listView.addHeaderView(header, null, false);
 			listView.setAdapter(adapter);
 			/*为每个Item添加点击响应，点击打开简介页*/
 			listView.setOnItemClickListener(new OnItemClickListener() {

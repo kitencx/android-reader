@@ -21,4 +21,6 @@ public class Book {
 	public ArrayList<String[]> catalog;
 	/**封面图片*/
 	public Bitmap cover;
+	/**书签*/
+	public int bookmark;
 }

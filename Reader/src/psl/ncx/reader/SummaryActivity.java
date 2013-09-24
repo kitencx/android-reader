@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.animation.AnimationUtils;
@@ -35,6 +36,8 @@ public class SummaryActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		getActionBar().setHomeButtonEnabled(true);
 		
 		Intent intent = getIntent();
 		indexURL = intent.getStringExtra(IntentConstant.INDEX_URL);
@@ -58,6 +61,23 @@ public class SummaryActivity extends Activity {
 			book.cover = null;
 		}
 		super.onDestroy();
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()){
+		case android.R.id.home:
+			this.finish();
+			overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
+			break;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	public void onBackPressed() {
+		super.onBackPressed();
+		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 	
 	/**
@@ -181,9 +201,9 @@ public class SummaryActivity extends Activity {
 			imageCover.setImageBitmap(result.cover);
 			textBookName.setText(result.bookName);
 			textAuthor.setText(result.author);
-			textUpdateTime.setText(result.updateTime);
-			textLatestChapter.setText(result.latestChapter);
-			textSummary.setText(result.summary);
+			textUpdateTime.setText("更新日期：" + result.updateTime);
+			textLatestChapter.setText("最新章节：" + result.latestChapter);
+			textSummary.setText("简介：\n" + result.summary);
 			
 			mCollect.setOnClickListener(new OnClickListener() {
 				@Override
@@ -224,6 +244,7 @@ public class SummaryActivity extends Activity {
 						intent.putExtra(IntentConstant.CHAPTERS, result);
 						SummaryActivity.this.finish();
 						startActivity(intent);
+						overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 					}
 				});
 			}

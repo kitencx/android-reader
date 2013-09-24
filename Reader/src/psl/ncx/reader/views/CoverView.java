@@ -34,12 +34,13 @@ public class CoverView extends ImageView {
 		super.onDraw(canvas);
 		if(title != null){
 			if(rect == null){
-				rect = new Rect(0, (int)(getHeight() * 0.6f), getWidth(), (int)(getHeight() * 0.6f) + 20);
+				rect = new Rect(getPaddingLeft(), (int)(getHeight() * 0.6f),
+						getWidth() - getPaddingRight(), (int)(getHeight() * 0.6f) + 20);
 			}
 			paint.setColor(0x80000000);
 			canvas.drawRect(rect, paint);
 			paint.setColor(0xffffffff);
-			int length = paint.breakText(title, true, getWidth(), null);
+			int length = paint.breakText(title, true, rect.width(), null);
 			title = title.substring(0, length);
 			float x = (getWidth() - title.length() * paint.getTextSize()) / 2;
 			canvas.drawText(title, x, getHeight() * 0.6f + paint.getTextSize(), paint);

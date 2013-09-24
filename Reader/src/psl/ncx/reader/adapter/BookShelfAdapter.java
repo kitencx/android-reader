@@ -39,6 +39,7 @@ public class BookShelfAdapter extends BaseAdapter {
 		CoverView cover;
 		if(convertView == null){
 			cover = new CoverView(context);
+			cover.setPadding(2, 2, 2, 2);
 			cover.setAdjustViewBounds(true);
 		}else{
 			cover = (CoverView)convertView;

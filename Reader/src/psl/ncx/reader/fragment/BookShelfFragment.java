@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
+import android.view.animation.LayoutAnimationController;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -41,10 +42,10 @@ public class BookShelfFragment extends Fragment {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
+				System.out.println(view.getClass().getName());
 				Object[] o = (Object[]) parent.getItemAtPosition(position);
 				String bookname = (String) o[0];
 				Intent intent = new Intent(getActivity(), ContentActivity.class);
-				intent.putExtra(IntentConstant.OPEN_INDEX, 0);
 				intent.putExtra(IntentConstant.OPEN_BOOKNAME, bookname);
 				startActivity(intent);
 			}
@@ -73,7 +74,7 @@ public class BookShelfFragment extends Fragment {
 				return false;
 			}
 		});
-		
+		mGrid.setLayoutAnimation(new LayoutAnimationController(AnimationUtils.loadAnimation(getActivity(), R.anim.in_from_bottom)));
 		
 		anim = (ImageView) fragment.findViewById(R.id.anim_load);
 		

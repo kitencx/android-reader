@@ -16,6 +16,7 @@ import android.widget.ListView;
 public class ChapterActivity extends Activity {
 	private ListView listView;
 	private ArrayList<String[]> catalog;
+	private int position;
 	
 	
 	@SuppressWarnings("unchecked")
@@ -24,13 +25,14 @@ public class ChapterActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		
 		Intent intent = getIntent();
+		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, 0);
 		catalog = (ArrayList<String[]>) intent.getSerializableExtra(IntentConstant.CHAPTERS);
 		
 		setContentView(R.layout.activity_chapter);
 		listView = (ListView) findViewById(R.id.listview_chapter);
 		
 		ChapterListAdapter adapter = new ChapterListAdapter(ChapterActivity.this, 
-				android.R.layout.simple_list_item_1, catalog);
+				R.layout.listitem_chapter, catalog);
 		listView.setAdapter(adapter);
 		
 		listView.setOnItemClickListener(new OnItemClickListener() {
@@ -44,6 +46,13 @@ public class ChapterActivity extends Activity {
 				overridePendingTransition(0, R.anim.out_to_top);
 			}
 		});
+	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		
+		listView.setSelection(position);
 	}
 	
 	@Override

@@ -30,7 +30,8 @@
         </activity>
         <activity
             android:name="psl.ncx.reader.SearchResultActivity"
-            android:label="@string/title_activity_search_result">
+            android:label=""
+            android:icon="@drawable/navigation_back">
         </activity>
         <activity
             android:name="psl.ncx.reader.ChapterActivity"
@@ -45,7 +46,8 @@
         </activity>
         <activity
             android:name="psl.ncx.reader.SummaryActivity"
-            android:label="@string/title_activity_summary" >
+            android:label=""
+            android:icon="@drawable/navigation_back">
         </activity>
     </application>
 

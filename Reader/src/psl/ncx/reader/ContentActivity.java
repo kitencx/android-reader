@@ -21,6 +21,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.text.Html;
+import android.text.Spanned;
 import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -67,11 +68,10 @@ public class ContentActivity extends Activity {
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
-		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, 0);
 		bookname = intent.getStringExtra(IntentConstant.OPEN_BOOKNAME);
 		chapters = (ArrayList<String[]>)intent.getSerializableExtra(IntentConstant.CHAPTERS);
 		
-		new LoadContent().execute(position);
+		new LoadContent().execute();
 	}
 	
 	@Override
@@ -87,6 +87,7 @@ public class ContentActivity extends Activity {
 		case R.id.action_catalog:
 			mActionBar.hide();
 			intent = new Intent(this, ChapterActivity.class);
+			intent.putExtra(IntentConstant.OPEN_INDEX, position);
 			intent.putExtra(IntentConstant.CHAPTERS, chapters);
 			startActivityForResult(intent, 0);
 			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
@@ -102,7 +103,7 @@ public class ContentActivity extends Activity {
 			switch(resultCode){
 			case Activity.RESULT_OK:
 				position = data.getIntExtra(IntentConstant.OPEN_INDEX, 0);
-				new LoadContent().execute(position);
+				new LoadContent().execute();
 				break;
 			}
 			break;
@@ -127,10 +128,17 @@ public class ContentActivity extends Activity {
 		return true;
 	}
 	
+	@Override
+	protected void onDestroy() {
+		//记录书签
+		DataAccessHelper.storeBookmark(this, bookname, position);
+		super.onDestroy();
+	}
+	
 	/**
 	 * 异步任务，获取章节内容
 	 * */
-	private class LoadContent extends AsyncTask<Integer, Void, String>{
+	private class LoadContent extends AsyncTask<Void, Void, String>{
 		@Override
 		protected void onPreExecute() {
 			//新任务启动，释放当前的图片内容
@@ -145,13 +153,14 @@ public class ContentActivity extends Activity {
 		}
 		
 		@Override
-		protected String doInBackground(Integer... params) {
+		protected String doInBackground(Void... params) {
 			if(chapters == null){
 				//没有提供章节信息，先读入章节
+				position = DataAccessHelper.getBookmark(ContentActivity.this, bookname);
+				System.out.println("获取到书签：" + position);
 				chapters = DataAccessHelper.loadCatalogFromFile(ContentActivity.this, bookname);
 			}
-			int cp = params[0];
-			String url = chapters.get(cp)[1];
+			String url = chapters.get(position)[1];
 			Document doc = null;
 			try {
 				doc = Jsoup.connect(url).get();
@@ -165,7 +174,19 @@ public class ContentActivity extends Activity {
 			if(content.isEmpty()) return RESOLVE_FAILED;
 			else{
 				Elements image = content.select(".divimage");
-				if(image.isEmpty())	return content.first().html();
+				if(image.isEmpty()){
+					Spanned s = Html.fromHtml(content.first().html());
+					StringBuilder sb = new StringBuilder();
+					for(int i = 0; i < s.length(); i++){
+						//替换所有160空格为全角
+						char c = s.charAt(i);
+						//不知道什么原因，4个160半角空格只有1个汉字的大小，为此多添加一倍的空格
+						if (c == 160 || c== 32) sb.append((char)160).append((char)160);
+						else if (c == 8220 || c==8221) sb.append((char)(34 + 65248));
+						else sb.append(c);
+					}
+					return sb.toString();
+				}
 				//图片显示
 				try {
 					String imgsrc = image.first().child(0).absUrl("src");
@@ -203,7 +224,7 @@ public class ContentActivity extends Activity {
 		retry.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				new LoadContent().execute(position);
+				new LoadContent().execute();
 			}
 		});
 	}
@@ -229,7 +250,7 @@ public class ContentActivity extends Activity {
 		contentView = (PagedView) findViewById(R.id.view_content);
 		contentView.setLongClickable(true);
 		
-		maker = new PageMaker(Html.fromHtml(result).toString(), screenSize.x, screenSize.y, contentView.getPaint());
+		maker = new PageMaker(result, screenSize.x, screenSize.y, contentView.getPaint());
 		maker.setPadding(contentView.getPaddingLeft(), contentView.getPaddingTop(), 
 				contentView.getPaddingRight(), contentView.getPaddingBottom());
 
@@ -265,13 +286,8 @@ public class ContentActivity extends Activity {
 		@Override
 		public boolean onSingleTapConfirmed(MotionEvent e) {
 			//点击显示ActionBar
-			Point center = new Point(screenSize.x/2, screenSize.y/2);
-			float x = e.getX();
-			float y = e.getY();
-			if(x > center.x - 50 && x < center.x + 50 && y > center.y - 50 && y < center.y + 50){
-				if(mActionBar.isShowing()) mActionBar.hide();
-				else mActionBar.show();
-			}
+			if(mActionBar.isShowing()) mActionBar.hide();
+			else mActionBar.show();
 			return true;
 		}
 		
@@ -285,7 +301,8 @@ public class ContentActivity extends Activity {
 					contentView.setContent(page);
 				}else{
 					if(position - 1 >= 0){
-						new LoadContent().execute(--position);
+						position--;
+						new LoadContent().execute();
 						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
 						contentView.setOnTouchListener(null);
 					}
@@ -296,7 +313,8 @@ public class ContentActivity extends Activity {
 				if(page != null)	contentView.setContent(page);
 				else{
 					if(position + 1 < chapters.size()){
-						new LoadContent().execute(++position);
+						position++;
+						new LoadContent().execute();
 						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
 						contentView.setOnTouchListener(null);
 					}
@@ -315,13 +333,8 @@ public class ContentActivity extends Activity {
 		@Override
 		public boolean onSingleTapConfirmed(MotionEvent e) {
 			//点击显示ActionBar
-			Point center = new Point(screenSize.x/2, screenSize.y/2);
-			float x = e.getX();
-			float y = e.getY();
-			if(x > center.x - 50 && x < center.x + 50 && y > center.y - 50 && y < center.y + 50){
-				if(mActionBar.isShowing()) mActionBar.hide();
-				else mActionBar.show();
-			}
+			if(mActionBar.isShowing()) mActionBar.hide();
+			else mActionBar.show();
 			return true;
 		}
 		
@@ -330,12 +343,14 @@ public class ContentActivity extends Activity {
 				float velocityY) {
 			if(e2.getX() - e1.getX() > 100){
 				if(position - 1 > 0){
-					new LoadContent().execute(--position);
+					position--;
+					new LoadContent().execute();
 					scrollView.setOnTouchListener(null);
 				}
 			}else if(e1.getX() - e2.getX() > 100){
 				if(position + 1 < chapters.size()){
-					new LoadContent().execute(++position);
+					position++;
+					new LoadContent().execute();
 					scrollView.setOnTouchListener(null);
 				}
 			}

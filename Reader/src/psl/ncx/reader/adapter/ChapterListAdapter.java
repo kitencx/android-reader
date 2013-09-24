@@ -22,30 +22,30 @@ public class ChapterListAdapter extends BaseAdapter {
 	
 	@Override
 	public int getCount() {
-		// TODO Auto-generated method stub
 		return chapters.size();
 	}
 
 	@Override
 	public String[] getItem(int position) {
-		// TODO Auto-generated method stub
 		return chapters.get(position);
 	}
 
 	@Override
 	public long getItemId(int position) {
-		// TODO Auto-generated method stub
 		return position;
 	}
 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
+		TextView chapter;
 		if(convertView == null){
-			convertView = LayoutInflater.from(this.context).inflate(layout, null);
+			chapter = (TextView) LayoutInflater.from(this.context).inflate(layout, null);
+		}else{
+			chapter = (TextView) convertView;
 		}
-		((TextView)convertView).setText(getItem(position)[0]);
+		chapter.setText(getItem(position)[0]);
 		
-		return convertView;
+		return chapter;
 	}
 
 }

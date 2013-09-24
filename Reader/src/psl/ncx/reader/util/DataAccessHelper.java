@@ -10,8 +10,9 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import psl.ncx.reader.model.Book;
+import java.util.Scanner;
 
+import psl.ncx.reader.model.Book;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -83,7 +84,7 @@ public class DataAccessHelper {
 					catch (IOException e) {}
 			}
 		}
-		
+
 		return true;
 	}
 	
@@ -225,5 +226,52 @@ public class DataAccessHelper {
 			}
 		}
 		return null;
+	}
+	
+	public static int getBookmark(Context context, String bookname){
+		int extp = bookname.lastIndexOf(".");
+		bookname = bookname.substring(0, extp==-1?bookname.length():extp);
+		FileInputStream fis = null;
+		try {
+			fis = context.openFileInput(bookname + ".bookmark");
+			Scanner scan = new Scanner(fis);
+			if(scan.hasNext()){
+				String bookmark = scan.next();
+				if(bookmark.matches("\\d+")){
+					return Integer.parseInt(bookmark);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			if(fis != null)
+				try {fis.close();}
+				catch (IOException e){}
+		}
+		
+		return 0;
+	}
+	
+	public static void storeBookmark(Context context, String bookname, int bookmark){
+		int extp = bookname.lastIndexOf(".");
+		bookname = bookname.substring(0, extp==-1?bookname.length():extp);
+		FileOutputStream fos = null;
+		PrintWriter writer = null;
+		try {
+			fos = context.openFileOutput(bookname + ".bookmark", Context.MODE_PRIVATE);
+			writer = new PrintWriter(fos, true);
+			writer.print(bookmark);
+			if(writer.checkError()) System.out.println("写入书签发生错误！");
+		} catch (FileNotFoundException e) {
+			//不会发生
+			e.printStackTrace();
+		} finally {
+			if (fos != null)
+				try {fos.close();}
+				catch (IOException e){}
+				finally {
+					if (writer != null) writer.close();
+				}
+		}
 	}
 }

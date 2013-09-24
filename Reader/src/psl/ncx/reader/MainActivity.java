@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
+
 		//隐藏ActionBar
 		mActionBar = getActionBar();
 		mActionBar.hide();
@@ -32,22 +32,27 @@ public class MainActivity extends Activity {
 	}
 	
 	@Override
+	protected void onStop() {
+		super.onStop();
+		mActionBar.hide();
+	}
+	
+	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		//创建搜索栏
 		getMenuInflater().inflate(R.menu.main, menu);
 
 		mSearchMenu = menu.findItem(R.id.searchitem);
 		mSearchView = (SearchView) mSearchMenu.getActionView();
+		mSearchView.setQueryHint("关键字：书名/作者");
 		//添加搜索响应
 		mSearchView.setOnQueryTextListener(new OnQueryTextListener() {
 			@Override
 			public boolean onQueryTextSubmit(String query) {
 				//隐藏搜索栏，并转跳到查询页
-				mActionBar.hide();
 				Intent intent = new Intent(MainActivity.this, SearchResultActivity.class);
 				intent.putExtra(IntentConstant.SEARCH_KEYWORD, query);
 				startActivity(intent);
-				overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 				
 				return false;
 			}

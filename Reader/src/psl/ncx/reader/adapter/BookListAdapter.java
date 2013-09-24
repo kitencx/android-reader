@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 public class BookListAdapter extends BaseAdapter {
@@ -46,12 +45,10 @@ public class BookListAdapter extends BaseAdapter {
 		if(convertView == null){
 			convertView = LayoutInflater.from(context).inflate(layout, null);
 		}
-		ImageView cover = (ImageView) convertView.findViewById(R.id.imageview_cover);
 		TextView bookName = (TextView)convertView.findViewById(R.id.text_bookname);
 		TextView author = (TextView)convertView.findViewById(R.id.text_author);
 		TextView date = (TextView)convertView.findViewById(R.id.text_date);
 		
-		cover.setImageResource(R.drawable.ic_launcher);
 		Book book = getItem(position);
 		bookName.setText("书名：" + book.bookName);
 		author.setText("作者：" + book.author);
