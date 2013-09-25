@@ -3,7 +3,7 @@ package psl.ncx.reader.adapter;
 import java.util.ArrayList;
 
 import psl.ncx.reader.R;
-
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,6 +44,7 @@ public class ChapterListAdapter extends BaseAdapter {
 		this.selectedItem = position;
 	}
 	
+	@SuppressLint("NewApi")
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		TextView chapter;
@@ -54,7 +55,7 @@ public class ChapterListAdapter extends BaseAdapter {
 		}
 		chapter.setText(getItem(position)[0]);
 		if (position == selectedItem) {
-			chapter.setBackgroundColor(0xff3366ff);
+			chapter.setBackgroundColor(0xfe3366ff);
 			chapter.setTextColor(0xffffffff);
 		}else{
 			chapter.setBackgroundResource(R.drawable.selector_chapter);

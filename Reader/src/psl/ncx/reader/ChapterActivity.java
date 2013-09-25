@@ -34,7 +34,7 @@ public class ChapterActivity extends Activity {
 		ChapterListAdapter adapter = new ChapterListAdapter(ChapterActivity.this, 
 				R.layout.listitem_chapter, catalog);
 		//设置被选中的条目
-//		adapter.setSelectedPosition(position);
+		adapter.setSelectedPosition(position);
 		listView.setAdapter(adapter);
 		
 		listView.setOnItemClickListener(new OnItemClickListener() {
