@@ -4,4 +4,6 @@
     <color name="black">#000000</color>
     <color name="transparent">#00000000</color>
     <color name="semitransparent">#40000000</color>
+    <color name="brightblue">#ff3366ff</color>
+    <color name="wihte">#ffffffff</color>
 </resources>
