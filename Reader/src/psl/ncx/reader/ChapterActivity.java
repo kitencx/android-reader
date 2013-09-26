@@ -1,11 +1,11 @@
 package psl.ncx.reader;
 
-import java.util.ArrayList;
 import psl.ncx.reader.adapter.ChapterListAdapter;
 import psl.ncx.reader.constant.IntentConstant;
-import android.os.Bundle;
+import psl.ncx.reader.model.Book;
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,24 +15,23 @@ import android.widget.ListView;
 
 public class ChapterActivity extends Activity {
 	private ListView listView;
-	private ArrayList<String[]> catalog;
+	private Book book;
 	private int position;
 	
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
 		Intent intent = getIntent();
 		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, 0);
-		catalog = (ArrayList<String[]>) intent.getSerializableExtra(IntentConstant.CHAPTERS);
+		book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		
 		setContentView(R.layout.activity_chapter);
 		listView = (ListView) findViewById(R.id.listview_chapter);
 		
 		ChapterListAdapter adapter = new ChapterListAdapter(ChapterActivity.this, 
-				R.layout.listitem_chapter, catalog);
+				R.layout.listitem_chapter, book.catalog);
 		//设置被选中的条目
 		adapter.setSelectedPosition(position);
 		listView.setAdapter(adapter);

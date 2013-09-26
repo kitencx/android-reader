@@ -6,11 +6,10 @@ import psl.ncx.reader.adapter.BookListAdapter;
 import psl.ncx.reader.business.BookCollection;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.util.URLValidator;
-import android.os.AsyncTask;
-import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -122,14 +121,10 @@ public class SearchResultActivity extends Activity {
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
 					Book book = (Book) listView.getItemAtPosition(position);
-					String indexURL = book.indexURL;
-					if(URLValidator.validate(indexURL, URLValidator.URL_INDEX)){
-						//验证指定URL是否是目录页，是才打开
-						Intent intent = new Intent(SearchResultActivity.this, SummaryActivity.class);
-						intent.putExtra(IntentConstant.INDEX_URL, indexURL);
-						startActivity(intent);
-						overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
-					}
+					Intent intent = new Intent(SearchResultActivity.this, SummaryActivity.class);
+					intent.putExtra(IntentConstant.BOOK_INFO, book);
+					startActivity(intent);
+					overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 				}
 			});
 		}

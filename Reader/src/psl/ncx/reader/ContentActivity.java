@@ -8,26 +8,26 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import psl.ncx.reader.constant.IntentConstant;
-import psl.ncx.reader.util.DataAccessHelper;
-import psl.ncx.reader.util.HttpRequestHelper;
+import psl.ncx.reader.db.DBAccessHelper;
+import psl.ncx.reader.model.Book;
+import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
-
-import android.os.AsyncTask;
-import android.os.Bundle;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Point;
+import android.os.AsyncTask;
+import android.os.Bundle;
 import android.text.Html;
 import android.text.Spanned;
 import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.animation.AnimationUtils;
@@ -43,15 +43,13 @@ public class ContentActivity extends Activity {
 	private ScrollView scrollView;
 	private ActionBar mActionBar;
 	private Bitmap bitmap;
-	private ArrayList<String[]> chapters;
-	private String bookname;
+	private Book book;
 	private int position;
 	private PageMaker maker;
 	private PageDownListener listener;
 	private Point screenSize;
 	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -68,8 +66,7 @@ public class ContentActivity extends Activity {
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
-		bookname = intent.getStringExtra(IntentConstant.OPEN_BOOKNAME);
-		chapters = (ArrayList<String[]>)intent.getSerializableExtra(IntentConstant.CHAPTERS);
+		book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		
 		new LoadContent().execute();
 	}
@@ -88,7 +85,7 @@ public class ContentActivity extends Activity {
 			mActionBar.hide();
 			intent = new Intent(this, ChapterActivity.class);
 			intent.putExtra(IntentConstant.OPEN_INDEX, position);
-			intent.putExtra(IntentConstant.CHAPTERS, chapters);
+			intent.putExtra(IntentConstant.BOOK_INFO, book);
 			startActivityForResult(intent, 0);
 			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
 			break;
@@ -129,10 +126,10 @@ public class ContentActivity extends Activity {
 	}
 	
 	@Override
-	protected void onDestroy() {
-		//记录书签
-		DataAccessHelper.storeBookmark(this, bookname, position);
-		super.onDestroy();
+	protected void onStop() {
+		super.onStop();
+		//如果当前页看不到鸟，就更新书签
+		DBAccessHelper.updateBookMark(this, book.bookid, position);
 	}
 	
 	/**
@@ -154,13 +151,11 @@ public class ContentActivity extends Activity {
 		
 		@Override
 		protected String doInBackground(Void... params) {
-			if(chapters == null){
-				//没有提供章节信息，先读入章节
-				position = DataAccessHelper.getBookmark(ContentActivity.this, bookname);
-				System.out.println("获取到书签：" + position);
-				chapters = DataAccessHelper.loadCatalogFromFile(ContentActivity.this, bookname);
+			if(book.catalog == null){
+				position = book.bookmark;
+				book.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, book.bookid);
 			}
-			String url = chapters.get(position)[1];
+			String url = book.catalog.get(position)[1];
 			Document doc = null;
 			try {
 				doc = Jsoup.connect(url).get();
@@ -188,15 +183,11 @@ public class ContentActivity extends Activity {
 					return sb.toString();
 				}
 				//图片显示
-				try {
-					String imgsrc = image.first().child(0).absUrl("src");
-					String cachename = bookname + "@" + chapters.get(position)[0];
-					bitmap = HttpRequestHelper.loadImageFromURL(ContentActivity.this, imgsrc, cachename);
+				bitmap = HttpUtil.loadImageFromURL(ContentActivity.this, image.first().child(0).absUrl("src"));
+				if(bitmap != null){
 					return IMAGE_CONTENT;
-				} catch (IOException e) {
-					e.printStackTrace();
-					return CONNECT_FAILED;
 				}
+				return CONNECT_FAILED;
 			}
 		}
 		
@@ -257,7 +248,7 @@ public class ContentActivity extends Activity {
 		//新章节载入，重置分页工具类状态
 		maker.reset();
 		//获取第一页，并显示
-		contentView.setTitle(chapters.get(position)[0]);
+		contentView.setTitle(book.catalog.get(position)[0]);
 		contentView.setContent(maker.nextPage());
 		//添加翻页事件监听
 		contentView.setOnTouchListener(listener);
@@ -312,7 +303,7 @@ public class ContentActivity extends Activity {
 				ArrayList<String> page = maker.nextPage();
 				if(page != null)	contentView.setContent(page);
 				else{
-					if(position + 1 < chapters.size()){
+					if(position + 1 < book.catalog.size()){
 						position++;
 						new LoadContent().execute();
 						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
@@ -348,7 +339,7 @@ public class ContentActivity extends Activity {
 					scrollView.setOnTouchListener(null);
 				}
 			}else if(e1.getX() - e2.getX() > 100){
-				if(position + 1 < chapters.size()){
+				if(position + 1 < book.catalog.size()){
 					position++;
 					new LoadContent().execute();
 					scrollView.setOnTouchListener(null);

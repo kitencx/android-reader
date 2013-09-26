@@ -1,10 +1,12 @@
 package psl.ncx.reader.util;
 
 import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -15,7 +17,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-public class HttpRequestHelper {
+public class HttpUtil {
 	/**
 	 *根据指定的请求方式，配置默认的连接参数
 	 *@param connection 待配置的连接对象
@@ -88,42 +90,78 @@ public class HttpRequestHelper {
 	 * 根据URL获取图片，并且缓存至本地
 	 * @param context
 	 * @param url 图片src属性
-	 * @param filename 缓存的文件名，如果为null，则不缓存
-	 * @return 不会为null，只要获取失败，就会抛出IOException;
+	 * @return 失败则为null
 	 * */
-	public static Bitmap loadImageFromURL(Context context, String url, String filename) throws IOException{
-		/*尝试从本地存储上加载该章节，如果有则直接返回*/
-		Bitmap cache = DataAccessHelper.loadImageFromCache(context, filename);
-		if(cache != null) return cache;
+	public static Bitmap loadImageFromURL(Context context, String url){
+		URL imageURL = null;
+		try {
+			imageURL = new URL(url);
+		} catch (MalformedURLException e) {
+			//should not happen
+			e.printStackTrace();
+		}
 		
-		/*本地存储没有该图片，从网络获取*/
-		URL imageURL = new URL(url);
 		HttpURLConnection conn = null;
 		InputStream is = null;
+		try{
+			conn = (HttpURLConnection) imageURL.openConnection();
+			is = conn.getInputStream();
+			return BitmapFactory.decodeStream(is);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		finally{
+			if(is != null)
+				try {is.close();}
+				catch (IOException e) {}
+				finally {if(conn != null) conn.disconnect();}
+		}
+		return null;
+	}
+	
+	/**
+	 * 保存网络图片到本地，采用随机命名
+	 * @param context
+	 * @param url 图片URL
+	 * @return 保存成功则返回图片的文件名，否则返回null
+	 * */
+	public static String storeImageFromURL(Context context, String url) {
+		URL imageURL = null;
+		try {
+			imageURL = new URL(url);
+		} catch (MalformedURLException e) {
+			//should not happen.
+			e.printStackTrace();
+			return null;
+		}
+		HttpURLConnection conn = null;
+		InputStream is = null;
+		FileOutputStream fos = null;
 		try{
 			conn = (HttpURLConnection) imageURL.openConnection();
 			is = conn.getInputStream();
 			Bitmap bitmap = BitmapFactory.decodeStream(is);
 			if(bitmap == null) throw new IOException("图片解码失败！");
 			//图片下载成功，缓存至本地目录
-			if(filename != null){
-				if(DataAccessHelper.storeImage(context, bitmap, filename)){
-					//释放掉原来的图片资源
-					bitmap.recycle();
-					bitmap = null;
-					//重新载入本地图片
-					bitmap = DataAccessHelper.loadImageFromCache(context, filename);
-				}
+			String filename = System.currentTimeMillis() + ".png";
+			fos = context.openFileOutput(filename, Context.MODE_PRIVATE);
+			if(bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)){
+				return filename;
 			}
-			return bitmap;
-		}finally{
-			if(is != null){
-				try{
-					is.close();
-				}finally{
-					if(conn != null) conn.disconnect();
-				}
-			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+		finally{
+			if(is != null)
+				try{is.close();} 
+				catch (IOException e) {}
+				finally{
+					if(fos != null)
+						try{fos.close();}
+						catch(IOException e){}
+						finally{if(conn != null) conn.disconnect();}
+				}
+		}
+		return null;
 	}
 }

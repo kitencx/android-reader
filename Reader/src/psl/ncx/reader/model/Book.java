@@ -1,12 +1,15 @@
 package psl.ncx.reader.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-import android.graphics.Bitmap;
-
-public class Book {
+public class Book implements Serializable{
+	/**序列化版本号*/
+	private static final long serialVersionUID = 2446669851043724797L;
+	/**unique id*/
+	public String bookid;
 	/**书名*/
-	public String bookName;
+	public String bookname;
 	/**作者*/
 	public String author;
 	/**更新时间*/
@@ -19,8 +22,12 @@ public class Book {
 	public String indexURL;
 	/**目录*/
 	public ArrayList<String[]> catalog;
-	/**封面图片*/
-	public Bitmap cover;
 	/**书签*/
 	public int bookmark;
+	/**来源*/
+	public String from;
+	/**封面图片文件名*/
+	public String cover;
+	/**简介页链接*/
+	public String summaryURL;
 }

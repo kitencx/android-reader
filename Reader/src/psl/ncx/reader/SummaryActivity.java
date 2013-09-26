@@ -10,14 +10,17 @@ import org.jsoup.select.Elements;
 
 import psl.ncx.reader.async.LoadChapter;
 import psl.ncx.reader.constant.IntentConstant;
+import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.util.DataAccessHelper;
-import psl.ncx.reader.util.HttpRequestHelper;
-import psl.ncx.reader.util.URLValidator;
+import psl.ncx.reader.util.HttpUtil;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.app.Activity;
-import android.content.Intent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,10 +31,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 public class SummaryActivity extends Activity {
-	private String indexURL;
-	private String summaryURL;
 	private Button mCollect;
 	private Book book;
+	private String coverurl;
+	private Bitmap cover;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -40,27 +43,15 @@ public class SummaryActivity extends Activity {
 		getActionBar().setHomeButtonEnabled(true);
 		
 		Intent intent = getIntent();
-		indexURL = intent.getStringExtra(IntentConstant.INDEX_URL);
-		summaryURL = concatSummaryURL(indexURL);
-		book = new Book();
-		book.indexURL = indexURL;
+		book = (Book)intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		
-		new LoadSummary().execute(summaryURL);
+		new LoadSummary().execute();
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.summary, menu);
 		return true;
-	}
-	
-	@Override
-	protected void onDestroy() {
-		if(book.cover != null){
-			book.cover.recycle();
-			book.cover = null;
-		}
-		super.onDestroy();
 	}
 	
 	@Override
@@ -80,17 +71,7 @@ public class SummaryActivity extends Activity {
 		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 	
-	/**
-	 * 根据提供的目录页URL，拼接一个简介页的URL
-	 * */
-	private String concatSummaryURL(String indexURL){
-		String noprotocol = indexURL.substring(7);		//去除网址中的协议字符串
-		String[] s = noprotocol.split("/");						//按"/"分割，取得网址目录结构
-		String summaryURL = "http://" + s[0] + "/jieshaoinfo/" + s[2] + "/" + s[3] + ".htm";
-		return summaryURL;
-	}
-
-	private class LoadSummary extends AsyncTask<String, Integer, Book>{
+	private class LoadSummary extends AsyncTask<Void, Void, Book>{
 
 		@Override
 		protected void onPreExecute() {
@@ -101,15 +82,11 @@ public class SummaryActivity extends Activity {
 		}
 		
 		@Override
-		protected Book doInBackground(String... params) {
-			String url = params[0];
-			if(!URLValidator.validate(url, URLValidator.URL_SUMMARY)) return null;
-			
+		protected Book doInBackground(Void... params) {
 			Document doc = null;
 			try {
-				doc = Jsoup.connect(url).get();
-				//解析
-				resolveSummaryPage(doc, book);
+				doc = Jsoup.connect(book.summaryURL).get();
+				resolveDocument(doc, book);
 				return book;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -129,11 +106,12 @@ public class SummaryActivity extends Activity {
 		
 		/**
 		 * 解析简介页，将解析到的数据保存如outBook
+		 * @param doc 解析的页面
+		 * @param outBook 解析结果保存进在对象
 		 * */
-		private void resolveSummaryPage(Document doc, Book outBook){
-			/*****************书名***************************************/
-			Elements infos = doc.select(".biaoti");
-			outBook.bookName = infos.text();
+		private void resolveDocument(Document doc, Book outBook){
+			outBook.from = "六九中文";
+			Elements infos = null;
 			/*****************作者、更新日期********************/
 			infos = doc.select(".info");
 			for(int i = 0; i < infos.size(); i++){
@@ -148,24 +126,18 @@ public class SummaryActivity extends Activity {
 				for(String s : arrs){
 					String[] kv = s.split(":");
 					if(kv.length == 2){
-						if("作者".equals(kv[0])) outBook.author = kv[1];
-						else if("更新日期".equals(kv[0])) outBook.updateTime = kv[1];
+						if("更新日期".equals(kv[0])) outBook.updateTime = kv[1];
 					}
 				}
 			}
 			/****************简介***********************************/
 			infos = doc.select(".intro");
 			outBook.summary = infos.text();
-			/****************最新章节******************************/
-			infos = doc.select(".newupdate ul li a");
-			outBook.latestChapter = infos.text();
 			/****************封面**********************************/
 			infos = doc.select(".coverleft a img");
 			if(!infos.isEmpty()){
-				try {
-					book.cover = HttpRequestHelper.loadImageFromURL(SummaryActivity.this,
-							infos.first().absUrl("src"), null);
-				} catch (IOException e) {}
+				coverurl = infos.first().absUrl("src");
+				cover = HttpUtil.loadImageFromURL(SummaryActivity.this, coverurl);
 			}
 		}
 		
@@ -179,7 +151,7 @@ public class SummaryActivity extends Activity {
 			retry.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					new LoadSummary().execute(summaryURL);
+					new LoadSummary().execute();
 					v.setOnClickListener(null);
 				}
 			});
@@ -198,8 +170,8 @@ public class SummaryActivity extends Activity {
 			TextView textLatestChapter = (TextView)findViewById(R.id.textview_latestchapter);
 			TextView textSummary = (TextView)findViewById(R.id.textview_summary);
 			
-			imageCover.setImageBitmap(result.cover);
-			textBookName.setText(result.bookName);
+			imageCover.setImageBitmap(cover);
+			textBookName.setText(result.bookname);
 			textAuthor.setText(result.author);
 			textUpdateTime.setText("更新日期：" + result.updateTime);
 			textLatestChapter.setText("最新章节：" + result.latestChapter);
@@ -208,40 +180,58 @@ public class SummaryActivity extends Activity {
 			mCollect.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					if(URLValidator.validate(indexURL, URLValidator.URL_INDEX)){
-						new ListChapter().execute(indexURL);
-						mCollect.setOnClickListener(null);
-						mCollect.setText("正在下载目录");
-					}
+					new ListChapter().execute();
+					mCollect.setOnClickListener(null);
+					mCollect.setText("正在下载目录");
 				}
 			});
 		}
 		
-		private class ListChapter extends AsyncTask<String, Void, ArrayList<String[]>>{
+		private class ListChapter extends AsyncTask<Void, Void, Long>{
 
 			@Override
-			protected ArrayList<String[]> doInBackground(String... params) {
-				ArrayList<String[]> chapters = new LoadChapter().doInBackground(params[0]);
-				if(chapters == null) return null;
-				//保存书籍
+			protected Long doInBackground(Void... params) {
+				ArrayList<String[]> chapters = new LoadChapter().doInBackground(book.indexURL);
+				String filename = HttpUtil.storeImageFromURL(SummaryActivity.this, coverurl);
+				System.out.println(filename);
+				//章节获取失败，则都不保存
+				if(chapters == null) return -1L;
+				
 				book.catalog = chapters;
-				if(!DataAccessHelper.isExisted(SummaryActivity.this, book.bookName)){
-					DataAccessHelper.store(SummaryActivity.this, book);
-				}
-				return chapters;
+				book.cover = filename;
+				
+				return DBAccessHelper.insert(SummaryActivity.this, book);
 			}
 			
 			@Override
-			protected void onPostExecute(final ArrayList<String[]> result) {
+			protected void onPostExecute(Long result) {
+				if(result == -1){
+					//保存失败！
+					AlertDialog.Builder builder = new Builder(SummaryActivity.this, R.style.SimpleDialogTheme);
+					builder.setMessage("下载目录失败！是否重试？")
+					.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							dialog.dismiss();
+						}
+					})
+					.setPositiveButton("重试", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							new ListChapter().execute();
+							dialog.dismiss();
+						}
+					}).show();
+					return;
+				}
+				
 				mCollect.setText("阅读");
 				mCollect.setOnClickListener(new OnClickListener() {
 					@Override
 					public void onClick(View v) {
 						//点击开始阅读
 						Intent intent = new Intent(SummaryActivity.this, ContentActivity.class);
-						intent.putExtra(IntentConstant.OPEN_INDEX, 0);
-						intent.putExtra(IntentConstant.OPEN_BOOKNAME, book.bookName);
-						intent.putExtra(IntentConstant.CHAPTERS, result);
+						intent.putExtra(IntentConstant.BOOK_INFO, book);
 						SummaryActivity.this.finish();
 						startActivity(intent);
 						overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);

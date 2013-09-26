@@ -19,7 +19,7 @@ import org.jsoup.select.Elements;
 import android.util.Log;
 
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.util.HttpRequestHelper;
+import psl.ncx.reader.util.HttpUtil;
 
 public class BookCollection {
 	private String error;
@@ -42,14 +42,14 @@ public class BookCollection {
 		try{
 			conn = (HttpURLConnection) url.openConnection();
 			//配置POST默认参数
-			HttpRequestHelper.configDefaultConnection(conn, "POST");
+			HttpUtil.configDefaultConnection(conn, "POST");
 
 			Map<String, String> values = new TreeMap<String, String>();
 			values.put("searchtype", "articlename");
 			values.put("searchkey", keyword);
 			values.put("Submit", " 搜 索 ");
 			//设置请求正文
-			HttpRequestHelper.setPayLoad(conn, values, charset);
+			HttpUtil.setPayLoad(conn, values, charset);
 
 			InputStream is = null;
 			try{
@@ -57,7 +57,7 @@ public class BookCollection {
 				if(conn.getResponseCode() == 200){
 					//如果请求正常返回，则解析返回
 					Document doc = Jsoup.parse(is, charset, "http://www.69zw.com");
-					return resolvingDocument(doc);
+					return resolveDocument(doc);
 				}
 			} finally{
 				if(is != null) is.close();
@@ -85,7 +85,7 @@ public class BookCollection {
 	 * @param doc 当前解析的网页
 	 * @return 搜索结果，书籍的列表
 	 * */
-	public ArrayList<Book> resolvingDocument(Document doc){
+	public ArrayList<Book> resolveDocument(Document doc){
 		ArrayList<Book> bookList = new ArrayList<Book>();
 		
 		//查看是否存在class=grid的table，有就取得所有行，没有则表示当前书籍简介页面
@@ -96,12 +96,13 @@ public class BookCollection {
 				String bookName = row.child(0).text();
 				String author = row.child(2).text();
 				String latestChapter = row.child(1).text();
-				String indexUrl = row.child(1).child(0).absUrl("href");
+				String indexURL = row.child(1).child(0).absUrl("href");
 				Book book = new Book();
-				book.bookName = bookName;
+				book.bookname = bookName;
 				book.author = author;
 				book.latestChapter = latestChapter;
-				book.indexURL = indexUrl;
+				book.indexURL = indexURL;
+				book.summaryURL = concatSummaryURL(indexURL);
 				bookList.add(book);
 			}
 		}else{
@@ -111,12 +112,13 @@ public class BookCollection {
 				String bookName = contents[0].trim();
 				String author = contents[1].trim();
 				String latestChapter = doc.select(".newupdate ul li a").first().text();
-				String indexUrl = startRead.child(0).absUrl("href");
+				String indexURL = startRead.child(0).absUrl("href");
 				Book book = new Book();
-				book.bookName = bookName;
+				book.bookname = bookName;
 				book.author = author;
 				book.latestChapter = latestChapter;
-				book.indexURL = indexUrl;
+				book.indexURL = indexURL;
+				book.summaryURL = concatSummaryURL(indexURL);
 				bookList.add(book);
 			}
 		}
@@ -130,5 +132,15 @@ public class BookCollection {
 	 * */
 	public String checkError(){
 		return error;
+	}
+	
+	/**
+	 * 根据提供的目录页URL，拼接一个简介页的URL
+	 * */
+	private String concatSummaryURL(String indexURL){
+		String noprotocol = indexURL.substring(7);		//去除网址中的协议字符串
+		String[] s = noprotocol.split("/");						//按"/"分割，取得网址目录结构
+		String summaryURL = "http://" + s[0] + "/jieshaoinfo/" + s[2] + "/" + s[3] + ".htm";
+		return summaryURL;
 	}
 }

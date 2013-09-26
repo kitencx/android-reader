@@ -50,7 +50,7 @@ public class BookListAdapter extends BaseAdapter {
 		TextView date = (TextView)convertView.findViewById(R.id.text_date);
 		
 		Book book = getItem(position);
-		bookName.setText("书名：" + book.bookName);
+		bookName.setText("书名：" + book.bookname);
 		author.setText("作者：" + book.author);
 		date.setText("最新章节：" + book.latestChapter);
 		

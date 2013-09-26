@@ -6,7 +6,8 @@ import psl.ncx.reader.ContentActivity;
 import psl.ncx.reader.R;
 import psl.ncx.reader.adapter.BookShelfAdapter;
 import psl.ncx.reader.constant.IntentConstant;
-import psl.ncx.reader.util.DataAccessHelper;
+import psl.ncx.reader.db.DBAccessHelper;
+import psl.ncx.reader.model.Book;
 import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
@@ -47,10 +48,9 @@ public class BookShelfFragment extends Fragment {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				Object[] o = (Object[]) parent.getItemAtPosition(position);
-				String bookname = (String) o[0];
+				Book book = (Book) parent.getItemAtPosition(position);
 				Intent intent = new Intent(getActivity(), ContentActivity.class);
-				intent.putExtra(IntentConstant.OPEN_BOOKNAME, bookname);
+				intent.putExtra(IntentConstant.BOOK_INFO, book);
 				startActivity(intent);
 			}
 		});
@@ -59,17 +59,13 @@ public class BookShelfFragment extends Fragment {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				Object[] o = (Object[]) parent.getItemAtPosition(position);
-				final String bookname = (String) o[0];
+				final Book book = (Book) parent.getItemAtPosition(position);
 				AlertDialog.Builder builder = new Builder(getActivity(), R.style.SimpleDialogTheme);
-				builder.setMessage("删除《" + bookname + "》？")
+				builder.setMessage("删除《" + book.bookname + "》？")
 				.setNegativeButton("删除", new OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						getActivity().deleteFile(bookname);
-						getActivity().deleteFile(bookname.substring(0, bookname.lastIndexOf('.')) + "@cover.png");
-						getActivity().deleteFile(bookname.substring(0, bookname.lastIndexOf('.')) + ".bookmark");
-						Toast.makeText(getActivity(), "《" + bookname + "》删除成功！", Toast.LENGTH_SHORT).show();
+						Toast.makeText(getActivity(), "《" + book.bookname + "》删除成功！", Toast.LENGTH_SHORT).show();
 						new LoadBookShelf().execute();
 						dialog.dismiss();
 					}
@@ -108,7 +104,7 @@ public class BookShelfFragment extends Fragment {
 		new LoadBookShelf().execute();
 	}
 	
-	private class LoadBookShelf extends AsyncTask<Void, Void, ArrayList<Object[]>>{
+	private class LoadBookShelf extends AsyncTask<Void, Void, ArrayList<Book>>{
 		@Override
 		protected void onPreExecute() {
 			mGrid.setVisibility(View.GONE);
@@ -118,12 +114,12 @@ public class BookShelfFragment extends Fragment {
 		}
 		
 		@Override
-		protected ArrayList<Object[]> doInBackground(Void... params) {
-			return DataAccessHelper.loadBooks(getActivity());
+		protected ArrayList<Book> doInBackground(Void... params) {
+			return DBAccessHelper.queryAllBooks(getActivity());
 		}
 		
 		@Override
-		protected void onPostExecute(ArrayList<Object[]> result) {
+		protected void onPostExecute(ArrayList<Book> result) {
 			anim.clearAnimation();
 			anim.setVisibility(View.GONE);
 			

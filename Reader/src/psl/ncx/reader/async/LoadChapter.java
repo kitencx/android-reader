@@ -10,15 +10,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import psl.ncx.reader.util.URLValidator;
-
 import android.util.Log;
 
 public class LoadChapter{
 	
 	public ArrayList<String[]> doInBackground(String url){
-		if(!URLValidator.validate(url, URLValidator.URL_INDEX)) return null;
-		
 		ArrayList<String[]> chapters = new ArrayList<String[]>();
 		
 		URL indexUrl = null;
