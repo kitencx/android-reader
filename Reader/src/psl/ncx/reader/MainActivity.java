@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
 			public boolean onQueryTextSubmit(String query) {
 				//隐藏搜索栏，并转跳到查询页
 				Intent intent = new Intent(MainActivity.this, SearchResultActivity.class);
-				intent.putExtra(IntentConstant.SEARCH_KEYWORD, query);
+				intent.putExtra(IntentConstant.SEARCH_KEYWORD, query.trim());
 				startActivity(intent);
 				
 				return false;

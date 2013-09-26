@@ -65,6 +65,8 @@ public class BookShelfFragment extends Fragment {
 				.setNegativeButton("删除", new OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
+						DBAccessHelper.removeBookById(getActivity(), book.bookid);
+						if(book.cover != null) getActivity().deleteFile(book.cover);
 						Toast.makeText(getActivity(), "《" + book.bookname + "》删除成功！", Toast.LENGTH_SHORT).show();
 						new LoadBookShelf().execute();
 						dialog.dismiss();
@@ -104,6 +106,9 @@ public class BookShelfFragment extends Fragment {
 		new LoadBookShelf().execute();
 	}
 	
+	/**
+	 * 异步查询任务，查询所有的书籍的基本信息
+	 * */
 	private class LoadBookShelf extends AsyncTask<Void, Void, ArrayList<Book>>{
 		@Override
 		protected void onPreExecute() {

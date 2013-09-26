@@ -126,9 +126,9 @@ public class ContentActivity extends Activity {
 	}
 	
 	@Override
-	protected void onStop() {
-		super.onStop();
-		//如果当前页看不到鸟，就更新书签
+	protected void onPause() {
+		super.onPause();
+		//保存书签
 		DBAccessHelper.updateBookMark(this, book.bookid, position);
 	}
 	

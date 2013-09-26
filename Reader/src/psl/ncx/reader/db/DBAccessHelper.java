@@ -87,7 +87,7 @@ public class DBAccessHelper {
 	/**
 	 * 查询所有Book基本信息
 	 * @param context
-	 * @return 所有Book的基本信息，不包括章节信息
+	 * @return 所有Book的基本信息，不包括章节信息，不会为null
 	 * @see #queryChaptersById(Context, String)
 	 * */
 	public static ArrayList<Book> queryAllBooks(Context context){
@@ -124,6 +124,18 @@ public class DBAccessHelper {
 		SQLiteDatabase db = new DBOpenHelper(context).getWritableDatabase();
 		ContentValues values = new ContentValues();
 		values.put(BookEntry.COLUMN_BOOKMARK, bookmark);
-		return db.update(BookEntry.TABLE_NAME, values, BookEntry._ID + "=?", new String[]{bookid});
+		int result = db.update(BookEntry.TABLE_NAME, values, BookEntry._ID + "=?", new String[]{bookid});
+		db.close();
+		return result;
+	}
+	
+	/**
+	 * 删除数据库中指定bookid的所有条目，包括章节信息，注意删除封面图片，此次删除操作不包括该图片
+	 * */
+	public static void removeBookById(Context context, String bookid){
+		SQLiteDatabase db = new DBOpenHelper(context).getWritableDatabase();
+		db.delete(BookEntry.TABLE_NAME, BookEntry._ID + "=?", new String[]{bookid});
+		db.delete(ChapterEntry.TABLE_NAME, ChapterEntry.COLUMN_BOOK_ID  + "=?", new String[]{bookid});
+		db.close();
 	}
 }
