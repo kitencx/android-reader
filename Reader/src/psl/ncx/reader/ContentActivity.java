@@ -10,6 +10,8 @@ import org.jsoup.select.Elements;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
+import psl.ncx.reader.util.BitmapUtil;
+import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
@@ -21,7 +23,6 @@ import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Html;
-import android.text.Spanned;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
@@ -37,19 +38,50 @@ import android.widget.ScrollView;
 
 public class ContentActivity extends Activity {
 	private final String CONNECT_FAILED = "connect_failed";
-	private final String RESOLVE_FAILED = "resolve_failed";
 	private final String IMAGE_CONTENT = "image_content";
+	/**
+	 * 标识是否开启内容缓存
+	 * */
+	private boolean useCache = true;
+	/**
+	 * 页面组件
+	 * */
 	private PagedView contentView;
 	private ScrollView scrollView;
 	private ActionBar mActionBar;
+	/**
+	 * 图片章节的内容
+	 * */
 	private Bitmap bitmap;
+	/**
+	 * 当前阅读的Book对象
+	 * */
 	private Book book;
+	/**
+	 * 当前阅读的章节
+	 * */
 	private int position;
+	/**
+	 * 文本分页工具类
+	 * */
 	private PageMaker maker;
+	/**
+	 * 翻页事件监听
+	 * */
 	private PageDownListener listener;
+	/**
+	 * 屏幕尺寸
+	 * */
 	private Point screenSize;
+	/**
+	 * 手势检测，图片章节和文本章节的手势检测是不同的
+	 * */
 	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
+	/**
+	 * 标识图片章节时，当前显示的是第几页
+	 * */
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -124,7 +156,9 @@ public class ContentActivity extends Activity {
 		getMenuInflater().inflate(R.menu.content, menu);
 		return true;
 	}
-	
+	/**
+	 * 方法被覆写，触发书签保存操作
+	 * */
 	@Override
 	protected void onPause() {
 		super.onPause();
@@ -155,7 +189,22 @@ public class ContentActivity extends Activity {
 				position = book.bookmark;
 				book.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, book.bookid);
 			}
+			String cname = book.catalog.get(position)[0]; 
 			String url = book.catalog.get(position)[1];
+			
+			//先从缓存中读取内容
+			String textContent = DataAccessUtil
+					.loadTextContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".txt");
+			if (textContent != null) {
+				return textContent;
+			}
+			bitmap = DataAccessUtil
+					.loadImageContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".png");
+			if (bitmap != null) {
+				return IMAGE_CONTENT;
+			}
+			
+			//从网络获取内容
 			Document doc = null;
 			try {
 				doc = Jsoup.connect(url).get();
@@ -164,44 +213,63 @@ public class ContentActivity extends Activity {
 				return CONNECT_FAILED;
 			}
 			
-			Elements content = doc.select(".novel_content");
-			//解析不到内容
-			if(content.isEmpty()) return RESOLVE_FAILED;
-			else{
-				Elements image = content.select(".divimage");
-				if(image.isEmpty()){
-					Spanned s = Html.fromHtml(content.first().html());
-					StringBuilder sb = new StringBuilder();
-					for(int i = 0; i < s.length(); i++){
-						//替换所有160空格为全角
-						char c = s.charAt(i);
-						//不知道什么原因，4个160半角空格只有1个汉字的大小，为此多添加一倍的空格
-						if (c == 160 || c== 32) sb.append((char)160).append((char)160);
-						else if (c == 8220 || c==8221) sb.append((char)(34 + 65248));
-						else sb.append(c);
-					}
-					return sb.toString();
+			//先检查是否是图片章节
+			Elements contentNode = doc.select(".imagecontent");
+			if(!contentNode.isEmpty()){
+				Bitmap[] bitmaps = new Bitmap[contentNode.size()];
+				for(int i = contentNode.size() - 1; i >= 0; i--){
+					bitmaps[i] = HttpUtil.loadImageFromURL(ContentActivity.this, contentNode.get(i).absUrl("src"));
 				}
-				//图片显示
-				bitmap = HttpUtil.loadImageFromURL(ContentActivity.this, image.first().child(0).absUrl("src"));
-				if(bitmap != null){
-					return IMAGE_CONTENT;
+				if(bitmaps.length > 1){
+					//合并一个章节的所有图片
+					bitmap = BitmapUtil.combineBitmaps(bitmaps);
+				}else{
+					bitmap = bitmaps[0];
 				}
-				return CONNECT_FAILED;
+				if(useCache) DataAccessUtil.storeImageContent(ContentActivity.this, 
+						bitmap, book.bookid + "-" + cname + ".png");
+				return IMAGE_CONTENT;
 			}
+			//文本章节
+			contentNode = doc.select(".novel_content");
+			String content = replacePunctuMarks(Html.fromHtml(contentNode.html()).toString());
+			if (useCache)
+				DataAccessUtil.storeTextContent(ContentActivity.this, content, book.bookid + "-" + cname + ".txt");
+			return content;
 		}
 		
 		@Override
 		protected void onPostExecute(String result) {
 			if(CONNECT_FAILED.equals(result)){
 				showConnectFailed(result);
-			}else if(RESOLVE_FAILED.equals(result)){
-				//解析失败
 			}else if(IMAGE_CONTENT.equals(result)){
 				showImageContent(result);
 			}else{
 				showTextContent(result);
 			}
+		}
+		
+		/**
+		 * 替换所有半角标点为全角，美化文本显示
+		 * */
+		private String replacePunctuMarks(String src){
+			StringBuilder builder = new StringBuilder();
+			for(int i = 0; i < src.length(); i++){
+				char c = src.charAt(i);
+				switch(c){
+				case 160:
+				case 32:
+					builder.append((char)160).append((char)160);
+					break;
+				case 8220:
+				case 8221:
+					builder.append((char)(34 + 65248));
+					break;
+				default:
+					builder.append(c);
+				}
+			}
+			return builder.toString();
 		}
 	}
 	
@@ -333,6 +401,7 @@ public class ContentActivity extends Activity {
 		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
 				float velocityY) {
 			if(e2.getX() - e1.getX() > 100){
+				//先判断是否有当前章节没有显示完毕
 				if(position - 1 > 0){
 					position--;
 					new LoadContent().execute();

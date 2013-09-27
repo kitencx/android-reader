@@ -87,7 +87,7 @@ public class HttpUtil {
 	}
 	
 	/**
-	 * 根据URL获取图片，并且缓存至本地
+	 * 根据URL获取图片
 	 * @param context
 	 * @param url 图片src属性
 	 * @return 失败则为null

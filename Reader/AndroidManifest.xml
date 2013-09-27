@@ -41,7 +41,7 @@
         <activity
             android:name="psl.ncx.reader.ContentActivity"
             android:label=""
-            android:icon="@drawable/navigation_back"
+            android:icon="@drawable/navigation_backhome"
             android:theme="@style/FullscreenActionBarTheme" >
         </activity>
         <activity

@@ -193,7 +193,6 @@ public class SummaryActivity extends Activity {
 			protected Long doInBackground(Void... params) {
 				ArrayList<String[]> chapters = new LoadChapter().doInBackground(book.indexURL);
 				String filename = HttpUtil.storeImageFromURL(SummaryActivity.this, coverurl);
-				System.out.println(filename);
 				//章节获取失败，则都不保存
 				if(chapters == null) return -1L;
 				
