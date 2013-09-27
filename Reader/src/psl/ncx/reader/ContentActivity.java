@@ -17,6 +17,8 @@ import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Point;
@@ -204,6 +206,7 @@ public class ContentActivity extends Activity {
 				return IMAGE_CONTENT;
 			}
 			
+			if (!HttpUtil.hasAvaliableNetwork(ContentActivity.this)) return null;
 			//从网络获取内容
 			Document doc = null;
 			try {
@@ -240,7 +243,16 @@ public class ContentActivity extends Activity {
 		
 		@Override
 		protected void onPostExecute(String result) {
-			if(CONNECT_FAILED.equals(result)){
+			if(result == null){
+				AlertDialog.Builder builder = new AlertDialog.Builder(ContentActivity.this, R.style.SimpleDialogTheme);
+				builder.setMessage("没有可用的网络！")
+				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+					}
+				});
+			}else if(CONNECT_FAILED.equals(result)){
 				showConnectFailed(result);
 			}else if(IMAGE_CONTENT.equals(result)){
 				showImageContent(result);

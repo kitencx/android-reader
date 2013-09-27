@@ -16,6 +16,8 @@ import java.util.Map;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 public class HttpUtil {
 	/**
@@ -163,5 +165,13 @@ public class HttpUtil {
 				}
 		}
 		return null;
+	}
+
+	public static  boolean hasAvaliableNetwork(Context context){
+		ConnectivityManager connectivityManager = 
+				(ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+		if (info != null) System.out.println(info.getTypeName());
+		return info != null;
 	}
 }
