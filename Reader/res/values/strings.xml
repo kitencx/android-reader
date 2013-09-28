@@ -20,5 +20,6 @@
     <string name="button_collect">收藏本书</string>
     <string name="action_title_catalog">目录</string>
     <string name="action_close">关闭</string>
+    <string name="action_title_download">下载本书</string>
 
 </resources>

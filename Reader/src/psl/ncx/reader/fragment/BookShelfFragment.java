@@ -23,7 +23,6 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
-import android.view.animation.LayoutAnimationController;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -32,9 +31,9 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 public class BookShelfFragment extends Fragment {
+	private ActionBar mActionBar;
 	private GridView mGrid;
 	private ImageView anim;
-	private ActionBar mActionBar;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -42,8 +41,19 @@ public class BookShelfFragment extends Fragment {
 		View fragment = inflater.inflate(R.layout.fragment_bookshelf, container, false);
 		
 		mActionBar = getActivity().getActionBar();
-
+		
 		mGrid = (GridView) fragment.findViewById(R.id.gridview);
+		mGrid.setOnTouchListener(new OnTouchListener() {
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				switch (event.getAction()){
+				case MotionEvent.ACTION_DOWN:
+					if (mActionBar.isShowing()) mActionBar.hide();
+					break;
+				}
+				return false;
+			}
+		});
 		mGrid.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
@@ -52,6 +62,7 @@ public class BookShelfFragment extends Fragment {
 				Intent intent = new Intent(getActivity(), ContentActivity.class);
 				intent.putExtra(IntentConstant.BOOK_INFO, book);
 				startActivity(intent);
+				getActivity().overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 			}
 		});
 		/**长按删除指定书籍*/
@@ -81,19 +92,6 @@ public class BookShelfFragment extends Fragment {
 				return true;
 			}
 		});
-		/**点下书架隐藏搜索栏*/
-		mGrid.setOnTouchListener(new OnTouchListener() {
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				switch(event.getAction()){
-				case MotionEvent.ACTION_DOWN:
-					if(mActionBar.isShowing()) mActionBar.hide();
-					break;
-				}
-				return false;
-			}
-		});
-		mGrid.setLayoutAnimation(new LayoutAnimationController(AnimationUtils.loadAnimation(getActivity(), R.anim.in_from_bottom)));
 		
 		anim = (ImageView) fragment.findViewById(R.id.anim_load);
 		

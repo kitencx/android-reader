@@ -32,9 +32,21 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 public class SummaryActivity extends Activity {
+	/**
+	 * 收藏本书按钮
+	 * */
 	private Button mCollect;
+	/**
+	 * 当前查看的Book对象
+	 * */
 	private Book book;
+	/**
+	 * 封面图片的链接地址
+	 * */
 	private String coverurl;
+	/**
+	 * 封面图片
+	 * */
 	private Bitmap cover;
 	
 	@Override
@@ -116,24 +128,6 @@ public class SummaryActivity extends Activity {
 		private void resolveDocument(Document doc, Book outBook){
 			outBook.from = "六九中文";
 			Elements infos = null;
-			/*****************作者、更新日期********************/
-			infos = doc.select(".info");
-			for(int i = 0; i < infos.size(); i++){
-				Element info = infos.get(i);
-				String str = info.text();
-				//替换掉所有全角冒号和空格
-				str = str.replaceAll("：", ":");
-				str = str.replaceAll(" ", "");
-				//以"|"分割字符串，Android比较特别，"|"也需要转义
-				String[] arrs = str.split("\\|");
-				//查找具体信息
-				for(String s : arrs){
-					String[] kv = s.split(":");
-					if(kv.length == 2){
-						if("更新日期".equals(kv[0])) outBook.updateTime = kv[1];
-					}
-				}
-			}
 			/****************简介***********************************/
 			infos = doc.select(".intro");
 			outBook.summary = infos.text();
@@ -240,7 +234,6 @@ public class SummaryActivity extends Activity {
 						intent.putExtra(IntentConstant.BOOK_INFO, book);
 						SummaryActivity.this.finish();
 						startActivity(intent);
-						overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 					}
 				});
 			}

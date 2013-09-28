@@ -51,7 +51,7 @@ public class SearchResultActivity extends Activity {
 		switch(item.getItemId()){
 		case android.R.id.home:
 			this.finish();
-			overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
+			overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 			break;
 		}
 		return super.onOptionsItemSelected(item);
@@ -60,7 +60,7 @@ public class SearchResultActivity extends Activity {
 	@Override
 	public void onBackPressed() {
 		super.onBackPressed();
-		overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
+		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 
 	/**

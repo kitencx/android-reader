@@ -108,7 +108,9 @@ public class HttpUtil {
 		try{
 			conn = (HttpURLConnection) imageURL.openConnection();
 			is = conn.getInputStream();
-			return BitmapFactory.decodeStream(is);
+			BitmapFactory.Options opts = new BitmapFactory.Options();
+			opts.inPreferredConfig = Bitmap.Config.ARGB_4444;
+			return BitmapFactory.decodeStream(is, null, opts);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -171,7 +173,6 @@ public class HttpUtil {
 		ConnectivityManager connectivityManager = 
 				(ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo info = connectivityManager.getActiveNetworkInfo();
-		if (info != null) System.out.println(info.getTypeName());
 		return info != null;
 	}
 }

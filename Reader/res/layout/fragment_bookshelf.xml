@@ -26,6 +26,6 @@
         android:gravity="fill"
         android:drawSelectorOnTop="true"
         android:listSelector="@drawable/selector_gridview"
-        android:visibility="gone"></GridView>
+        android:visibility="gone"/>
 	
 </LinearLayout>

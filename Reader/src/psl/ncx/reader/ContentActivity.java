@@ -80,9 +80,6 @@ public class ContentActivity extends Activity {
 	 * */
 	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
-	/**
-	 * 标识图片章节时，当前显示的是第几页
-	 * */
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +110,7 @@ public class ContentActivity extends Activity {
 			//返回书架，必须设置Flag，否则只会新建一个MainActivity
 			intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
-			overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
+			overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 			break;
 		case R.id.action_catalog:
 			mActionBar.hide();
@@ -123,6 +120,10 @@ public class ContentActivity extends Activity {
 			startActivityForResult(intent, 0);
 			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
 			break;
+		case R.id.action_download:
+			//下载任务开启
+			item.setEnabled(false);
+			item.setIcon(R.drawable.downloading);
 		}
 		return true;
 	}
@@ -150,7 +151,7 @@ public class ContentActivity extends Activity {
 		//返回书架，必须设置Flag，否则只会新建一个MainActivity
 		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		startActivity(intent);
-		overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
+		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 
 	@Override

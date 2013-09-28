@@ -5,18 +5,20 @@
     android:orientation="vertical"
     tools:context=".MainActivity" >
 
-    <fragment 
-        android:id="@+id/fragment_bookshelf"
-        android:layout_weight="9"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:name="psl.ncx.reader.fragment.BookShelfFragment"/>
+	<fragment
+	    android:name="psl.ncx.reader.fragment.BookShelfFragment"
+	    android:layout_width="match_parent"
+	    android:layout_height="0dp"
+	    android:layout_weight="9"
+	    android:tag="bookshelf"/>
     
-    <fragment 
-        android:id="@+id/fragment_toolbar"
-        android:layout_weight="1"
+    <fragment
+        android:name="psl.ncx.reader.fragment.ToolBarFragment"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:name="psl.ncx.reader.fragment.ToolBarFragment"/>
+        android:layout_weight="1"
+        android:tag="toolbar"/>
+        
+    
 
 </LinearLayout>

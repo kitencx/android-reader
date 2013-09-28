@@ -11,33 +11,33 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 
 public class ToolBarFragment extends Fragment {
-	private ImageButton mbtnShelf;
+	private ImageButton mbtnBookShelf;
 	private ImageButton mbtnSearch;
 	private ActionBar mActionBar;
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
-		mActionBar = getActivity().getActionBar();
-		
 		View fragment = inflater.inflate(R.layout.fragment_toolbar, container, false);
 		
-		mbtnShelf = (ImageButton) fragment.findViewById(R.id.bookshelf);
-		mbtnShelf.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if(mActionBar.isShowing()) mActionBar.hide();
-			}
-		});
+		mActionBar = getActivity().getActionBar();
 		
 		mbtnSearch = (ImageButton) fragment.findViewById(R.id.search);
 		mbtnSearch.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				if(mActionBar.isShowing()) mActionBar.hide();
+				if (mActionBar.isShowing()) mActionBar.hide();
 				else mActionBar.show();
 			}
 		});
 		
+		mbtnBookShelf = (ImageButton) fragment.findViewById(R.id.bookshelf);
+		mbtnBookShelf.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (mActionBar.isShowing()) mActionBar.hide();
+			}
+		});
 		return fragment;
 	}
 }

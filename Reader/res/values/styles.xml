@@ -25,6 +25,10 @@
         <item name="android:windowActionBarOverlay">true</item>
     </style>
     
+    <style name="NoActionBarTheme" parent="AppBaseTheme">
+		<item name="android:windowActionBar">false</item>        
+    </style>
+    
     <style name="FullscreenActionBarTheme" parent="FullscreenTheme">
 		<item name="android:windowActionBarOverlay">true</item>
     </style>

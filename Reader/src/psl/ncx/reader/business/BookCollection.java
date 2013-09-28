@@ -92,33 +92,27 @@ public class BookCollection {
 		Elements rows = doc.select("table.grid tr");
 		if(rows.size() > 1){
 			for(int i = 1; i < rows.size(); i++){
-				Element row = rows.eq(i).first();
-				String bookName = row.child(0).text();
-				String author = row.child(2).text();
-				String latestChapter = row.child(1).text();
-				String indexURL = row.child(1).child(0).absUrl("href");
+				Element row = rows.get(i);
 				Book book = new Book();
-				book.bookname = bookName;
-				book.author = author;
-				book.latestChapter = latestChapter;
-				book.indexURL = indexURL;
-				book.summaryURL = concatSummaryURL(indexURL);
+				book.bookname = row.child(0).text();
+				book.author = row.child(2).text();
+				book.latestChapter = row.child(1).text();
+				book.updateTime = formatTime(row.child(4).text());
+				book.indexURL = row.child(1).child(0).absUrl("href");
+				book.summaryURL = concatSummaryURL(book.indexURL);
 				bookList.add(book);
 			}
 		}else{
 			Element startRead = doc.select(".btopt").first();
 			if(startRead != null){
 				String[] contents = doc.title().split(" - ");
-				String bookName = contents[0].trim();
-				String author = contents[1].trim();
-				String latestChapter = doc.select(".newupdate ul li a").first().text();
-				String indexURL = startRead.child(0).absUrl("href");
 				Book book = new Book();
-				book.bookname = bookName;
-				book.author = author;
-				book.latestChapter = latestChapter;
-				book.indexURL = indexURL;
-				book.summaryURL = concatSummaryURL(indexURL);
+				book.bookname = contents[0].trim();
+				book.author = contents[1].trim();
+				book.updateTime = doc.select(".info strong").get(3).text();
+				book.latestChapter = doc.select(".newupdate ul li a").first().text();
+				book.indexURL = startRead.child(0).absUrl("href");
+				book.summaryURL = concatSummaryURL(book.indexURL);
 				bookList.add(book);
 			}
 		}
@@ -142,5 +136,16 @@ public class BookCollection {
 		String[] s = noprotocol.split("/");						//按"/"分割，取得网址目录结构
 		String summaryURL = "http://" + s[0] + "/jieshaoinfo/" + s[2] + "/" + s[3] + ".htm";
 		return summaryURL;
+	}
+	
+	/**
+	 * 将更新日期格式化成yyyy-mm-dd
+	 * */
+	private String formatTime(String src){
+		if(src.matches("\\d{2}-\\d{2}-\\d{2}")){
+			return "20" + src;
+		}else{
+			return src;
+		}
 	}
 }

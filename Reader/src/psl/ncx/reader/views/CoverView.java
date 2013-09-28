@@ -42,7 +42,7 @@ public class CoverView extends ImageView {
 			paint.setColor(0xffffffff);
 			int length = paint.breakText(title, true, rect.width(), null);
 			title = title.substring(0, length);
-			float x = (getWidth() - title.length() * paint.getTextSize()) / 2;
+			float x = (getWidth() - paint.measureText(title)) / 2;
 			canvas.drawText(title, x, getHeight() * 0.6f + paint.getTextSize(), paint);
 		}
 	}

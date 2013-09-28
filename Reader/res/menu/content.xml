@@ -7,6 +7,12 @@
         android:title="@string/action_settings"/>
     
     <item 
+        android:id="@+id/action_download"
+        android:showAsAction="always"
+        android:icon="@drawable/download"
+        android:title="@string/action_title_download"/>
+    
+    <item 
         android:id="@+id/action_catalog"
         android:showAsAction="always"
         android:icon="@drawable/catalog"
