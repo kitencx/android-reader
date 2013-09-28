@@ -2,16 +2,17 @@ package psl.ncx.reader;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import psl.ncx.reader.async.LoadChapter;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
+import psl.ncx.reader.model.ChapterLink;
 import psl.ncx.reader.util.HttpUtil;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -71,6 +72,9 @@ public class SummaryActivity extends Activity {
 		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 	
+	/**
+	 * 简介信息获取的异步任务类，无参数，读取当前Book对象的简介页URL
+	 * */
 	private class LoadSummary extends AsyncTask<Void, Void, Book>{
 
 		@Override
@@ -187,18 +191,21 @@ public class SummaryActivity extends Activity {
 			});
 		}
 		
+		/**
+		 * 异步章节获取任务类，提供参数为目录页URL
+		 * */
 		private class ListChapter extends AsyncTask<Void, Void, Long>{
 
 			@Override
 			protected Long doInBackground(Void... params) {
-				ArrayList<String[]> chapters = new LoadChapter().doInBackground(book.indexURL);
-				String filename = HttpUtil.storeImageFromURL(SummaryActivity.this, coverurl);
+				ArrayList<ChapterLink> chapters = allChapters(book.indexURL);
 				//章节获取失败，则都不保存
 				if(chapters == null) return -1L;
 				
 				book.catalog = chapters;
+				String filename = HttpUtil.storeImageFromURL(SummaryActivity.this, coverurl);
+
 				book.cover = filename;
-				
 				return DBAccessHelper.insert(SummaryActivity.this, book);
 			}
 			
@@ -236,6 +243,31 @@ public class SummaryActivity extends Activity {
 						overridePendingTransition(R.anim.in_from_top, R.anim.out_to_bottom);
 					}
 				});
+			}
+		
+			/**
+			 * 获得目录页所有的章节信息（章节名和链接地址）
+			 * @param url 目录页链接地址
+			 * @return 章节信息集合，按顺序排列
+			 * */
+			private ArrayList<ChapterLink> allChapters(String url){
+				ArrayList<ChapterLink> chapters = new ArrayList<ChapterLink>();
+				
+				Document doc = null;
+				try {
+					doc = Jsoup.connect(url).timeout(15000).get();
+					Elements links = doc.select(".mod_container a");
+					for(Element link:links){
+						chapters.add(new ChapterLink(link.text(), link.absUrl("href")));
+					}
+					//排序
+					Collections.sort(chapters);
+					return chapters;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				return null;
 			}
 		}
 	}

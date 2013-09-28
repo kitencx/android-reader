@@ -11,8 +11,12 @@ public class BitmapUtil {
 		int height = 0;
 		int width = bitmaps[0].getWidth();
 		for(int i = 0; i < bitmaps.length; i++){
-			height += bitmaps[i].getHeight();
+			if(bitmaps[i] != null){
+				height += bitmaps[i].getHeight();
+			}
 		}
+		
+		if(height == 0) return null;
 		
 		Bitmap result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
 		Canvas canvas = new Canvas(result);

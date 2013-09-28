@@ -21,7 +21,7 @@ public class Book implements Serializable{
 	/**目录页链接*/
 	public String indexURL;
 	/**目录*/
-	public ArrayList<String[]> catalog;
+	public ArrayList<ChapterLink> catalog;
 	/**书签*/
 	public int bookmark;
 	/**来源*/

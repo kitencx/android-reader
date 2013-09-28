@@ -191,8 +191,8 @@ public class ContentActivity extends Activity {
 				position = book.bookmark;
 				book.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, book.bookid);
 			}
-			String cname = book.catalog.get(position)[0]; 
-			String url = book.catalog.get(position)[1];
+			String cname = book.catalog.get(position).title; 
+			String url = book.catalog.get(position).link;
 			
 			//先从缓存中读取内容
 			String textContent = DataAccessUtil
@@ -220,7 +220,7 @@ public class ContentActivity extends Activity {
 			Elements contentNode = doc.select(".imagecontent");
 			if(!contentNode.isEmpty()){
 				Bitmap[] bitmaps = new Bitmap[contentNode.size()];
-				for(int i = contentNode.size() - 1; i >= 0; i--){
+				for(int i = 0; i < bitmaps.length; i++){
 					bitmaps[i] = HttpUtil.loadImageFromURL(ContentActivity.this, contentNode.get(i).absUrl("src"));
 				}
 				if(bitmaps.length > 1){
@@ -229,6 +229,8 @@ public class ContentActivity extends Activity {
 				}else{
 					bitmap = bitmaps[0];
 				}
+				if(bitmap == null) return CONNECT_FAILED;
+				
 				if(useCache) DataAccessUtil.storeImageContent(ContentActivity.this, 
 						bitmap, book.bookid + "-" + cname + ".png");
 				return IMAGE_CONTENT;
@@ -328,7 +330,7 @@ public class ContentActivity extends Activity {
 		//新章节载入，重置分页工具类状态
 		maker.reset();
 		//获取第一页，并显示
-		contentView.setTitle(book.catalog.get(position)[0]);
+		contentView.setTitle(book.catalog.get(position).title);
 		contentView.setContent(maker.nextPage());
 		//添加翻页事件监听
 		contentView.setOnTouchListener(listener);

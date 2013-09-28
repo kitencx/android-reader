@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import psl.ncx.reader.constant.TableContract.BookEntry;
 import psl.ncx.reader.constant.TableContract.ChapterEntry;
 import psl.ncx.reader.model.Book;
+import psl.ncx.reader.model.ChapterLink;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -40,13 +41,13 @@ public class DBAccessHelper {
 		long result = db.insert(BookEntry.TABLE_NAME, null, values);
 		//如果书本信息插入成功，则开始插入章节信息
 		int size = book.catalog.size();
-		ArrayList<String[]> catalog = book.catalog;
+		ArrayList<ChapterLink> catalog = book.catalog;
 		for(int i = 0; i < size; i++){
 			values.clear();
 			values.put(ChapterEntry.COLUMN_BOOK_ID, result);
 			values.put(ChapterEntry.COLUMN_BOOKNAME, book.bookname);
-			values.put(ChapterEntry.COLUMN_CHAPTERNAME, catalog.get(i)[0]);
-			values.put(ChapterEntry.COLUMN_CHAPTERURL, catalog.get(i)[1]);
+			values.put(ChapterEntry.COLUMN_CHAPTERNAME, catalog.get(i).title);
+			values.put(ChapterEntry.COLUMN_CHAPTERURL, catalog.get(i).link);
 			if(db.insert(ChapterEntry.TABLE_NAME, null, values) == -1){
 				//插入失败，直接结束事务，因为没有db.setTransactionSuccessful()，所以事务会回滚
 				db.endTransaction();
@@ -68,16 +69,16 @@ public class DBAccessHelper {
 	 * @param bookid 查询id
 	 * @return 指定id的所有章节信息，Sting[]包含章节名、章节链接，不会为null
 	 * */
-	public static ArrayList<String[]> queryChaptersById(Context context, String bookid){
+	public static ArrayList<ChapterLink> queryChaptersById(Context context, String bookid){
 		SQLiteDatabase db = new DBOpenHelper(context).getReadableDatabase();
 		Cursor result = db.query(ChapterEntry.TABLE_NAME,
 				new String[]{ChapterEntry.COLUMN_CHAPTERNAME, ChapterEntry.COLUMN_CHAPTERURL}, 
 				ChapterEntry.COLUMN_BOOK_ID + "=?",	new String[]{bookid}, null, null, null);
-		ArrayList<String[]> chapters = new ArrayList<String[]>();
+		ArrayList<ChapterLink> chapters = new ArrayList<ChapterLink>();
 		while(result.moveToNext()){
 			String chaptername = result.getString(result.getColumnIndex(ChapterEntry.COLUMN_CHAPTERNAME));
 			String chapterurl = result.getString(result.getColumnIndex(ChapterEntry.COLUMN_CHAPTERURL));
-			chapters.add(new String[]{chaptername, chapterurl});
+			chapters.add(new ChapterLink(chaptername, chapterurl));
 		}
 		result.close();
 		db.close();
