@@ -3,8 +3,9 @@ package psl.ncx.reader;
 import java.util.ArrayList;
 
 import psl.ncx.reader.adapter.BookListAdapter;
-import psl.ncx.reader.business.BookCollection;
+import psl.ncx.reader.business.BookSearch;
 import psl.ncx.reader.constant.IntentConstant;
+import psl.ncx.reader.constant.SupportSite;
 import psl.ncx.reader.model.Book;
 import android.app.Activity;
 import android.content.Intent;
@@ -83,7 +84,21 @@ public class SearchResultActivity extends Activity {
 		 * */
 		@Override
 		protected ArrayList<Book> doInBackground(String... params) {
-			return new BookCollection().searchBookByKeyword(params[0], "GBK");
+			ArrayList<Book> all = null;
+			
+			ArrayList<Book> from1 = BookSearch.searchByKeyword(keyword, SupportSite.WJZW);
+			if(from1 != null){
+				if(all == null) all = new ArrayList<Book>();
+				all.addAll(from1);
+			}
+			
+			ArrayList<Book> from2 = BookSearch.searchByKeyword(keyword, SupportSite.LJZW);
+			if(from2 != null){
+				if(all == null) all = new ArrayList<Book>();
+				all.addAll(from2);
+			}
+			
+			return all; 
 		}
 		
 		@Override

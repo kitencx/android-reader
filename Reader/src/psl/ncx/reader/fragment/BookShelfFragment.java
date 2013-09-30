@@ -62,7 +62,6 @@ public class BookShelfFragment extends Fragment {
 				Intent intent = new Intent(getActivity(), ContentActivity.class);
 				intent.putExtra(IntentConstant.BOOK_INFO, book);
 				startActivity(intent);
-				getActivity().overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 			}
 		});
 		/**长按删除指定书籍*/

@@ -10,15 +10,24 @@ import android.widget.ImageView;
  * 封面视图，显示封面图片和书名
  * */
 public class CoverView extends ImageView {
+	/**
+	 * 文本画笔
+	 * */
 	private TextPaint paint;
+	/**
+	 * 书名
+	 * */
 	private String title;
+	/**
+	 * 书名背景大小
+	 * */
 	private Rect rect;
 	
 	public CoverView(Context context){
 		super(context);
 		
 		this.paint = new TextPaint();
-		paint.setTextSize(16.0f);
+		paint.setTextSize(15.0f);
 		paint.setAntiAlias(true);
 	}
 

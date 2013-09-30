@@ -16,8 +16,8 @@
         
         <ImageView 
             android:id="@+id/imageview_cover"
-            android:layout_width="82dp"
-            android:layout_height="102dp"
+            android:layout_width="80dp"
+            android:layout_height="100dp"
             android:adjustViewBounds="true"
             android:background="@color/black"
             android:contentDescription="@string/cover_description"/>
@@ -36,6 +36,12 @@
             
             <TextView 
                 android:id="@+id/textview_author"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"/>
+            
+            <TextView 
+                android:id="@+id/textview_from"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="10dp"/>

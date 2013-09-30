@@ -1,22 +1,22 @@
 package psl.ncx.reader;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
+import psl.ncx.reader.business.ChapterResolver;
+import psl.ncx.reader.business.SummaryResolver;
 import psl.ncx.reader.constant.IntentConstant;
+import psl.ncx.reader.constant.SupportSite;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.model.ChapterLink;
 import psl.ncx.reader.util.HttpUtil;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -26,24 +26,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class SummaryActivity extends Activity {
-	/**
-	 * 收藏本书按钮
-	 * */
-	private Button mCollect;
+public class SummaryActivity extends Activity implements View.OnClickListener{
+	private ViewHolder holder;
 	/**
 	 * 当前查看的Book对象
 	 * */
 	private Book book;
-	/**
-	 * 封面图片的链接地址
-	 * */
-	private String coverurl;
 	/**
 	 * 封面图片
 	 * */
@@ -52,13 +44,16 @@ public class SummaryActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+		setContentView(R.layout.activity_summary);
+		//开启返回按钮
 		getActionBar().setHomeButtonEnabled(true);
-		
+		//获取Book信息
 		Intent intent = getIntent();
 		book = (Book)intent.getSerializableExtra(IntentConstant.BOOK_INFO);
+		//初始化各个组件
+		initWidgets();
 		
-		new LoadSummary().execute();
+		new LoadCoverAndIntro().execute();
 	}
 
 	@Override
@@ -85,25 +80,142 @@ public class SummaryActivity extends Activity {
 	}
 	
 	/**
-	 * 简介信息获取的异步任务类，无参数，读取当前Book对象的简介页URL
+	 * View.OnClickListener，收藏按钮监听器
 	 * */
-	private class LoadSummary extends AsyncTask<Void, Void, Book>{
-
+	@Override
+	public void onClick(View v) {
+		v.setOnClickListener(null);
+		((Button)v).setText("正在下载目录");
+		new LoadChapters().execute();
+	}
+	
+	private void initWidgets(){
+		holder = new ViewHolder();
+		holder.mCoverImage = (ImageView) findViewById(R.id.imageview_cover);
+		holder.mTextName = (TextView) findViewById(R.id.textview_bookname);
+		holder.mTextAuthor = (TextView) findViewById(R.id.textview_author);
+		holder.mTextFrom = (TextView) findViewById(R.id.textview_from);
+		holder.mTextTime = (TextView) findViewById(R.id.textview_updatetime);
+		holder.mTextLatest = (TextView) findViewById(R.id.textview_latestchapter);
+		holder.mTextSummary = (TextView) findViewById(R.id.textview_summary);
+		holder.mButtonCollect = (Button) findViewById(R.id.button_collect);
+		
+		holder.mCoverImage.setImageResource(R.drawable.cover);
+		holder.mTextName.setText(book.bookname);
+		holder.mTextAuthor.setText("作者：" + book.author);
+		holder.mTextFrom.setText("来源：" + book.from);
+		holder.mTextTime.setText("更新日期：" + book.updateTime);
+		holder.mTextLatest.setText("最新章节：" + book.latestChapter);
+		holder.mTextSummary.setText("简介：\n" + book.summary);
+		
+		//为按钮添加事件
+		holder.mButtonCollect.setOnClickListener(this);
+	}
+	
+	/**
+	 * 返回Book的来源，SupportSite
+	 * */
+	private int from(Book book){
+		if (book.from.equals("五九中文")){
+			return SupportSite.WJZW;
+		}else if (book.from.equals("六九中文")){
+			return SupportSite.LJZW;
+		}
+		return -1;
+	}
+	
+	/**
+	 * ViewHolder，所有Widget的集合
+	 * */
+	class ViewHolder{
+		public ImageView mCoverImage;
+		public TextView mTextName;
+		public TextView mTextAuthor;
+		public TextView mTextFrom;
+		public Button mButtonCollect;
+		public TextView mTextTime;
+		public TextView mTextLatest;
+		public TextView mTextSummary;
+	}
+	
+	/**
+	 * 章节信息获取的异步任务，无参数，读取当前Book对象的目录页URL
+	 * 如果获取失败，则当前书籍无法加入书架
+	 * */
+	class LoadChapters extends AsyncTask<Void, Void, Void>{
 		@Override
-		protected void onPreExecute() {
-			//显示载入动画
-			setContentView(R.layout.loading);
-			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
-			processing.startAnimation(AnimationUtils.loadAnimation(SummaryActivity.this, R.drawable.processing));
+		protected Void doInBackground(Void... params) {
+			FileOutputStream fos = null;
+			try {
+				Document doc = Jsoup.connect(book.indexURL).timeout(10000).get();
+				ArrayList<ChapterLink> chapters = ChapterResolver.resolveIndex(doc, from(book));
+				if (chapters != null && chapters.size() > 0){
+					book.catalog = chapters;
+					//保存封面
+					if (cover != null) {
+						String filename = System.currentTimeMillis() + ".png";
+						fos = openFileOutput(filename, MODE_PRIVATE);
+						if (cover.compress(Bitmap.CompressFormat.PNG, 0, fos)) book.cover = filename;
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				if (fos != null) {
+					try {fos.close();}
+					catch (IOException e){}
+				}
+			}
+			return null;
 		}
 		
 		@Override
-		protected Book doInBackground(Void... params) {
+		protected void onPostExecute(Void result) {
+			if (book.catalog != null)
+				if (DBAccessHelper.insert(SummaryActivity.this, book) == -1) {
+					//目录获取成功，加入书架，如果失败，则删除封面，并提示重试
+					deleteFile(book.cover);
+					holder.mButtonCollect.setText(R.string.button_collect);
+					holder.mButtonCollect.setOnClickListener(SummaryActivity.this);
+					AlertDialog.Builder builder = new AlertDialog.Builder(SummaryActivity.this);
+					builder.setMessage("添加失败！")
+					.setNegativeButton("确定", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							dialog.dismiss();
+						}
+					}).show();
+				} else {
+					holder.mButtonCollect.setText("阅读");
+					holder.mButtonCollect.setOnClickListener(new OnClickListener() {
+						@Override
+						public void onClick(View v) {
+							Intent intent = new Intent(SummaryActivity.this, ContentActivity.class);
+							intent.putExtra(IntentConstant.BOOK_INFO, book);
+							startActivity(intent);
+							SummaryActivity.this.finish();
+						}
+					});
+				}
+		}
+		
+	}
+	
+	/**
+	 * 简介信息获取的异步任务类，无参数，读取当前Book对象的简介页URL
+	 * 尝试获取封面和简介信息，如果有则更新
+	 * */
+	class LoadCoverAndIntro extends AsyncTask<Void, Void, Void>{
+		@Override
+		protected Void doInBackground(Void... params) {
 			Document doc = null;
 			try {
-				doc = Jsoup.connect(book.summaryURL).get();
-				resolveDocument(doc, book);
-				return book;
+				doc = Jsoup.connect(book.summaryURL).timeout(10000).get();
+				/**尝试获取封面图片和简介*/
+				String coverurl = SummaryResolver.resolveSummary(doc, book, from(book));
+				if (coverurl != null) {
+					cover = HttpUtil.loadImageFromURL(SummaryActivity.this, coverurl);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -111,157 +223,9 @@ public class SummaryActivity extends Activity {
 		}
 		
 		@Override
-		protected void onPostExecute(Book result) {
-			if(result == null){
-				showConnectFailed(result);
-				return;
-			}
-			//成功返回数据
-			showSummary(result);
-		}
-		
-		/**
-		 * 解析简介页，将解析到的数据保存如outBook
-		 * @param doc 解析的页面
-		 * @param outBook 解析结果保存进在对象
-		 * */
-		private void resolveDocument(Document doc, Book outBook){
-			outBook.from = "六九中文";
-			Elements infos = null;
-			/****************简介***********************************/
-			infos = doc.select(".intro");
-			outBook.summary = infos.text();
-			/****************封面**********************************/
-			infos = doc.select(".coverleft a img");
-			if(!infos.isEmpty()){
-				coverurl = infos.first().absUrl("src");
-				cover = HttpUtil.loadImageFromURL(SummaryActivity.this, coverurl);
-			}
-		}
-		
-		/**
-		 * 连接失败，显示重试
-		 * */
-		private void showConnectFailed(Book result){
-			setContentView(R.layout.button_center);
-			Button retry = (Button) findViewById(R.id.button_center);
-			retry.setText("连接失败，重试？");
-			retry.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					new LoadSummary().execute();
-					v.setOnClickListener(null);
-				}
-			});
-		}
-		
-		/**
-		 * 显示简介
-		 * */
-		private void showSummary(Book result){
-			setContentView(R.layout.activity_summary);
-			ImageView imageCover = (ImageView)findViewById(R.id.imageview_cover);
-			TextView textBookName = (TextView) findViewById(R.id.textview_bookname);
-			TextView textAuthor = (TextView)findViewById(R.id.textview_author);
-			mCollect = (Button)findViewById(R.id.button_collect);
-			TextView textUpdateTime = (TextView)findViewById(R.id.textview_updatetime);
-			TextView textLatestChapter = (TextView)findViewById(R.id.textview_latestchapter);
-			TextView textSummary = (TextView)findViewById(R.id.textview_summary);
-			
-			imageCover.setImageBitmap(cover);
-			textBookName.setText(result.bookname);
-			textAuthor.setText(result.author);
-			textUpdateTime.setText("更新日期：" + result.updateTime);
-			textLatestChapter.setText("最新章节：" + result.latestChapter);
-			textSummary.setText("简介：\n" + result.summary);
-			
-			mCollect.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					new ListChapter().execute();
-					mCollect.setOnClickListener(null);
-					mCollect.setText("正在下载目录");
-				}
-			});
-		}
-		
-		/**
-		 * 异步章节获取任务类，提供参数为目录页URL
-		 * */
-		private class ListChapter extends AsyncTask<Void, Void, Long>{
-
-			@Override
-			protected Long doInBackground(Void... params) {
-				ArrayList<ChapterLink> chapters = allChapters(book.indexURL);
-				//章节获取失败，则都不保存
-				if(chapters == null) return -1L;
-				
-				book.catalog = chapters;
-				String filename = HttpUtil.storeImageFromURL(SummaryActivity.this, coverurl);
-
-				book.cover = filename;
-				return DBAccessHelper.insert(SummaryActivity.this, book);
-			}
-			
-			@Override
-			protected void onPostExecute(Long result) {
-				if(result == -1){
-					//保存失败！
-					AlertDialog.Builder builder = new Builder(SummaryActivity.this, R.style.SimpleDialogTheme);
-					builder.setMessage("下载目录失败！是否重试？")
-					.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							dialog.dismiss();
-						}
-					})
-					.setPositiveButton("重试", new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							new ListChapter().execute();
-							dialog.dismiss();
-						}
-					}).show();
-					return;
-				}
-				
-				mCollect.setText("阅读");
-				mCollect.setOnClickListener(new OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						//点击开始阅读
-						Intent intent = new Intent(SummaryActivity.this, ContentActivity.class);
-						intent.putExtra(IntentConstant.BOOK_INFO, book);
-						SummaryActivity.this.finish();
-						startActivity(intent);
-					}
-				});
-			}
-		
-			/**
-			 * 获得目录页所有的章节信息（章节名和链接地址）
-			 * @param url 目录页链接地址
-			 * @return 章节信息集合，按顺序排列
-			 * */
-			private ArrayList<ChapterLink> allChapters(String url){
-				ArrayList<ChapterLink> chapters = new ArrayList<ChapterLink>();
-				
-				Document doc = null;
-				try {
-					doc = Jsoup.connect(url).timeout(15000).get();
-					Elements links = doc.select(".mod_container a");
-					for(Element link:links){
-						chapters.add(new ChapterLink(link.text(), link.absUrl("href")));
-					}
-					//排序
-					Collections.sort(chapters);
-					return chapters;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				
-				return null;
-			}
+		protected void onPostExecute(Void result) {
+			if (cover != null) holder.mCoverImage.setImageBitmap(cover);
+			if (book.summary != null) holder.mTextSummary.setText(book.summary);
 		}
 	}
 }

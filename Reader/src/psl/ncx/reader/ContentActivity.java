@@ -110,7 +110,6 @@ public class ContentActivity extends Activity {
 			//返回书架，必须设置Flag，否则只会新建一个MainActivity
 			intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(intent);
-			overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 			break;
 		case R.id.action_catalog:
 			mActionBar.hide();
@@ -151,7 +150,6 @@ public class ContentActivity extends Activity {
 		//返回书架，必须设置Flag，否则只会新建一个MainActivity
 		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		startActivity(intent);
-		overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
 	}
 
 	@Override
@@ -226,7 +224,12 @@ public class ContentActivity extends Activity {
 				}
 				if(bitmaps.length > 1){
 					//合并一个章节的所有图片
-					bitmap = BitmapUtil.combineBitmaps(bitmaps);
+					try{
+						bitmap = BitmapUtil.combineBitmaps(bitmaps);
+					} catch (OutOfMemoryError e){
+						e.printStackTrace();
+						return null;
+					}
 				}else{
 					bitmap = bitmaps[0];
 				}
@@ -237,7 +240,8 @@ public class ContentActivity extends Activity {
 				return IMAGE_CONTENT;
 			}
 			//文本章节
-			contentNode = doc.select(".novel_content");
+//			contentNode = doc.select(".novel_content");
+			contentNode = doc.select("#content");
 			String content = replacePunctuMarks(Html.fromHtml(contentNode.html()).toString());
 			if (useCache)
 				DataAccessUtil.storeTextContent(ContentActivity.this, content, book.bookid + "-" + cname + ".txt");
