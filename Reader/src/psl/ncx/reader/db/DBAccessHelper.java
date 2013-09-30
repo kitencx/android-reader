@@ -107,6 +107,7 @@ public class DBAccessHelper {
 			book.latestChapter = result.getString(result.getColumnIndex(BookEntry.COLUMN_LATESTCHAPTER));
 			book.bookmark = result.getInt(result.getColumnIndex(BookEntry.COLUMN_BOOKMARK));
 			book.cover = result.getString(result.getColumnIndex(BookEntry.COLUMN_COVER));
+			book.from = result.getString(result.getColumnIndex(BookEntry.COLUMN_FROM));
 			books.add(book);
 		}
 		result.close();

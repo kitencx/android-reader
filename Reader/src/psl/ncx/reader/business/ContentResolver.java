@@ -2,19 +2,17 @@ package psl.ncx.reader.business;
 
 import org.jsoup.nodes.Document;
 
+import android.text.Html;
+
 import psl.ncx.reader.constant.SupportSite;
 
 public class ContentResolver {
-	private int site;
 	
-	public ContentResolver(int site){
-		this.site = site;
-	}
-	
-	public String resolveContent(Document doc){
-		switch(site){
-		case SupportSite.WJZW:
-			return doc.select("#content").html();
+	public static String resolveContent(Document doc, String site){
+		if (SupportSite.WJZW.equals(site)) {
+			return Html.fromHtml(doc.select("#content").html()).toString();
+		} else if (SupportSite.LJZW.equals(site)) {
+			return Html.fromHtml(doc.select(".novel_content").html()).toString();
 		}
 		return null;
 	}

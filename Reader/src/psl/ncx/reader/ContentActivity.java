@@ -7,6 +7,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
+import psl.ncx.reader.async.DownloadThread;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
@@ -24,7 +25,7 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Html;
+import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
@@ -81,10 +82,14 @@ public class ContentActivity extends Activity {
 	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
 	
+	private Handler mHandler; 
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		mHandler = new Handler();
+		
 		mActionBar = getActionBar();
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
@@ -123,6 +128,8 @@ public class ContentActivity extends Activity {
 			//下载任务开启
 			item.setEnabled(false);
 			item.setIcon(R.drawable.downloading);
+			new Thread(new DownloadThread(this, mHandler, book)).start();
+			break;
 		}
 		return true;
 	}
@@ -170,7 +177,7 @@ public class ContentActivity extends Activity {
 	/**
 	 * 异步任务，获取章节内容
 	 * */
-	private class LoadContent extends AsyncTask<Void, Void, String>{
+	class LoadContent extends AsyncTask<Void, Void, String>{
 		@Override
 		protected void onPreExecute() {
 			//新任务启动，释放当前的图片内容
@@ -209,9 +216,8 @@ public class ContentActivity extends Activity {
 			//从网络获取内容
 			Document doc = null;
 			try {
-				doc = Jsoup.connect(url).get();
+				doc = Jsoup.connect(url).timeout(10000).get();
 			} catch (IOException e) {
-				e.printStackTrace();
 				return CONNECT_FAILED;
 			}
 			
@@ -240,9 +246,7 @@ public class ContentActivity extends Activity {
 				return IMAGE_CONTENT;
 			}
 			//文本章节
-//			contentNode = doc.select(".novel_content");
-			contentNode = doc.select("#content");
-			String content = replacePunctuMarks(Html.fromHtml(contentNode.html()).toString());
+			String content = psl.ncx.reader.business.ContentResolver.resolveContent(doc, book.from);
 			if (useCache)
 				DataAccessUtil.storeTextContent(ContentActivity.this, content, book.bookid + "-" + cname + ".txt");
 			return content;
@@ -278,11 +282,15 @@ public class ContentActivity extends Activity {
 				switch(c){
 				case 160:
 				case 32:
-					builder.append((char)160).append((char)160);
+					//替换空格
+					builder.append((char)160).append(((char)160));
 					break;
 				case 8220:
+					//替换双引号
+					builder.append((char)12317);
+					break;
 				case 8221:
-					builder.append((char)(34 + 65248));
+					builder.append((char)12318);
 					break;
 				default:
 					builder.append(c);
@@ -290,55 +298,56 @@ public class ContentActivity extends Activity {
 			}
 			return builder.toString();
 		}
-	}
-	
-	/**
-	 * 连接失败，则显示重试按钮
-	 * */
-	private void showConnectFailed(String result){
-		setContentView(R.layout.button_center);
-		Button retry = (Button) findViewById(R.id.button_center);
-		retry.setText("连接失败，重试？");
-		retry.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				new LoadContent().execute();
-			}
-		});
-	}
-	
-	/**
-	 * 显示图片章节内容
-	 * */
-	private void showImageContent(String result){
-		setContentView(R.layout.activity_content_image);
-		ImageView imageView = (ImageView) findViewById(R.id.imageview_content);
-		scrollView = (ScrollView)imageView.getParent();
-
-		imageView.setImageBitmap(bitmap);
-		//如果给ImageView添加事件响应的话，因为ACTION_MOVE事件会被拦截，导致无法检测手势
-		scrollView.setOnTouchListener(listener);
-	}
-	
-	/**
-	 * 显示文本章节内容
-	 * */
-	private void showTextContent(String result){
-		setContentView(R.layout.activity_content);
-		contentView = (PagedView) findViewById(R.id.view_content);
-		contentView.setLongClickable(true);
 		
-		maker = new PageMaker(result, screenSize.x, screenSize.y, contentView.getPaint());
-		maker.setPadding(contentView.getPaddingLeft(), contentView.getPaddingTop(), 
-				contentView.getPaddingRight(), contentView.getPaddingBottom());
+		/**
+		 * 连接失败，则显示重试按钮
+		 * */
+		private void showConnectFailed(String result){
+			setContentView(R.layout.button_center);
+			Button retry = (Button) findViewById(R.id.button_center);
+			retry.setText("连接失败，重试？");
+			retry.setOnClickListener(new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					new LoadContent().execute();
+				}
+			});
+		}
+		
+		/**
+		 * 显示图片章节内容
+		 * */
+		private void showImageContent(String result){
+			setContentView(R.layout.activity_content_image);
+			ImageView imageView = (ImageView) findViewById(R.id.imageview_content);
+			scrollView = (ScrollView)imageView.getParent();
 
-		//新章节载入，重置分页工具类状态
-		maker.reset();
-		//获取第一页，并显示
-		contentView.setTitle(book.catalog.get(position).title);
-		contentView.setContent(maker.nextPage());
-		//添加翻页事件监听
-		contentView.setOnTouchListener(listener);
+			imageView.setImageBitmap(bitmap);
+			//如果给ImageView添加事件响应的话，因为ACTION_MOVE事件会被拦截，导致无法检测手势
+			scrollView.setOnTouchListener(listener);
+		}
+		
+		/**
+		 * 显示文本章节内容
+		 * */
+		private void showTextContent(String result){
+			setContentView(R.layout.activity_content);
+			result = replacePunctuMarks(result);
+			contentView = (PagedView) findViewById(R.id.view_content);
+			contentView.setLongClickable(true);
+			
+			maker = new PageMaker(result, screenSize.x, screenSize.y, contentView.getPaint());
+			maker.setPadding(contentView.getPaddingLeft(), contentView.getPaddingTop(), 
+					contentView.getPaddingRight(), contentView.getPaddingBottom());
+
+			//新章节载入，重置分页工具类状态
+			maker.reset();
+			//获取第一页，并显示
+			contentView.setTitle(book.catalog.get(position).title);
+			contentView.setContent(maker.nextPage());
+			//添加翻页事件监听
+			contentView.setOnTouchListener(listener);
+		}
 	}
 	
 	/**

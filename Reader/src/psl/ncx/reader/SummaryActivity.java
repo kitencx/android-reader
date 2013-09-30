@@ -10,7 +10,6 @@ import org.jsoup.nodes.Document;
 import psl.ncx.reader.business.ChapterResolver;
 import psl.ncx.reader.business.SummaryResolver;
 import psl.ncx.reader.constant.IntentConstant;
-import psl.ncx.reader.constant.SupportSite;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.model.ChapterLink;
@@ -113,18 +112,6 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 	}
 	
 	/**
-	 * 返回Book的来源，SupportSite
-	 * */
-	private int from(Book book){
-		if (book.from.equals("五九中文")){
-			return SupportSite.WJZW;
-		}else if (book.from.equals("六九中文")){
-			return SupportSite.LJZW;
-		}
-		return -1;
-	}
-	
-	/**
 	 * ViewHolder，所有Widget的集合
 	 * */
 	class ViewHolder{
@@ -148,7 +135,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 			FileOutputStream fos = null;
 			try {
 				Document doc = Jsoup.connect(book.indexURL).timeout(10000).get();
-				ArrayList<ChapterLink> chapters = ChapterResolver.resolveIndex(doc, from(book));
+				ArrayList<ChapterLink> chapters = ChapterResolver.resolveIndex(doc, book.from);
 				if (chapters != null && chapters.size() > 0){
 					book.catalog = chapters;
 					//保存封面
@@ -212,7 +199,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 			try {
 				doc = Jsoup.connect(book.summaryURL).timeout(10000).get();
 				/**尝试获取封面图片和简介*/
-				String coverurl = SummaryResolver.resolveSummary(doc, book, from(book));
+				String coverurl = SummaryResolver.resolveSummary(doc, book, book.from);
 				if (coverurl != null) {
 					cover = HttpUtil.loadImageFromURL(SummaryActivity.this, coverurl);
 				}

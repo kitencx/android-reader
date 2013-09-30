@@ -15,11 +15,10 @@ import psl.ncx.reader.model.ChapterLink;
  * */
 public class ChapterResolver {
 	
-	public static ArrayList<ChapterLink> resolveIndex(Document doc, int site){
-		switch(site){
-		case SupportSite.WJZW:
+	public static ArrayList<ChapterLink> resolveIndex(Document doc, String site){
+		if (SupportSite.WJZW.equals(site)) {
 			return new ChapterResolver().resolveIndexForWJZW(doc);
-		case SupportSite.LJZW:
+		} else if (SupportSite.LJZW.equals(site)) {
 			return new ChapterResolver().resolveIndexForLJZW(doc);
 		}
 		return null;

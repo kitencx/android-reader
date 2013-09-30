@@ -18,11 +18,10 @@ public class BookSearch {
 	 * @param 搜索类型，书名/作者，可以为null
 	 * @return 匹配的书籍集合
 	 * */
-	public static ArrayList<Book> searchByKeyword(String keyword, int site){
-		switch(site){
-		case SupportSite.WJZW:
+	public static ArrayList<Book> searchByKeyword(String keyword, String site){
+		if (SupportSite.WJZW.equals(site)) {
 			return new BookSearch().searchInWJZW(keyword);
-		case SupportSite.LJZW:
+		} else if (SupportSite.LJZW.equals(site)) {
 			return new BookSearch().searchInLJZW(keyword);
 		}
 		return null;
@@ -54,7 +53,7 @@ public class BookSearch {
 						//验证是否是一本有效的Book,bookname,indexurl,必须不为空，添加有效Book
 						if(book.bookname != null && book.indexURL != null && book.summaryURL != null){
 							if(book.indexURL.startsWith("http://") && book.summaryURL.startsWith("http://"))
-								book.from = "六九中文";
+								book.from = SupportSite.LJZW;
 								books.add(book);
 						}
 					}
@@ -94,7 +93,7 @@ public class BookSearch {
 						//验证是否是一本有效的Book,bookname,indexurl,必须不为空，添加有效Book
 						if(book.bookname != null && book.indexURL != null){
 							if(book.indexURL.startsWith("http://"))
-								book.from = "五九中文";
+								book.from = SupportSite.WJZW;
 								books.add(book);
 						}
 					}

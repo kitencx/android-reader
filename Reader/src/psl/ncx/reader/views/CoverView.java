@@ -46,7 +46,7 @@ public class CoverView extends ImageView {
 				rect = new Rect(getPaddingLeft(), (int)(getHeight() * 0.6f),
 						getWidth() - getPaddingRight(), (int)(getHeight() * 0.6f) + 20);
 			}
-			paint.setColor(0x80000000);
+			paint.setColor(0xa0000000);
 			canvas.drawRect(rect, paint);
 			paint.setColor(0xffffffff);
 			int length = paint.breakText(title, true, rect.width(), null);

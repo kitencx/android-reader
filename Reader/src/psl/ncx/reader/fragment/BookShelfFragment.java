@@ -1,5 +1,7 @@
 package psl.ncx.reader.fragment;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
 
 import psl.ncx.reader.ContentActivity;
@@ -75,8 +77,25 @@ public class BookShelfFragment extends Fragment {
 				.setNegativeButton("删除", new OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
+						//删除数据库中Book信息
 						DBAccessHelper.removeBookById(getActivity(), book.bookid);
+						//删除封面
 						if(book.cover != null) getActivity().deleteFile(book.cover);
+						//删除缓存章节
+						File dir = getActivity().getCacheDir();
+						String[] files = dir.list(new FilenameFilter() {
+							@Override
+							public boolean accept(File dir, String filename) {
+								if (filename.startsWith(book.bookid + "-")){
+									return true;
+								}
+								return false;
+							}
+						});
+						for (String file : files){
+							new File(dir, file).delete();
+						}
+						
 						Toast.makeText(getActivity(), "《" + book.bookname + "》删除成功！", Toast.LENGTH_SHORT).show();
 						new LoadBookShelf().execute();
 						dialog.dismiss();

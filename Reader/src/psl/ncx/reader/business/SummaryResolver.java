@@ -20,11 +20,10 @@ public class SummaryResolver {
 	 * @param SupportSite，根据指定的站点解析，每个站点的Document结构不同
 	 * @return 返回图片的链接地址
 	 * */
-	public static String resolveSummary(Document doc, Book output, int site){
-		switch(site){
-		case SupportSite.LJZW:
+	public static String resolveSummary(Document doc, Book output, String site){
+		if (SupportSite.WJZW.equals(site)) {
 			return new SummaryResolver().resolveSummaryInLJZW(doc, output);
-		case SupportSite.WJZW:
+		} else if (SupportSite.LJZW.equals(site)) {
 			return new SummaryResolver().resolveSummaryInWJZW(doc, output);
 		}
 		return null;
