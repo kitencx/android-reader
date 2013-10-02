@@ -46,11 +46,13 @@ public class BookListAdapter extends BaseAdapter {
 			convertView = LayoutInflater.from(context).inflate(layout, null);
 		}
 		TextView bookName = (TextView)convertView.findViewById(R.id.text_bookname);
+		TextView from = (TextView)convertView.findViewById(R.id.text_from);
 		TextView author = (TextView)convertView.findViewById(R.id.text_author);
 		TextView date = (TextView)convertView.findViewById(R.id.text_date);
 		
 		Book book = getItem(position);
 		bookName.setText("书名：" + book.bookname);
+		from.setText("来源：" + book.from);
 		author.setText("作者：" + book.author);
 		date.setText("最新章节：" + book.latestChapter);
 		

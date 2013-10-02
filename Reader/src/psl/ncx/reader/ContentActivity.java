@@ -7,10 +7,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
-import psl.ncx.reader.async.DownloadThread;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
+import psl.ncx.reader.service.DownloadService;
 import psl.ncx.reader.util.BitmapUtil;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
@@ -25,7 +25,6 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
@@ -82,14 +81,10 @@ public class ContentActivity extends Activity {
 	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
 	
-	private Handler mHandler; 
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		mHandler = new Handler();
-		
 		mActionBar = getActionBar();
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
@@ -128,7 +123,9 @@ public class ContentActivity extends Activity {
 			//下载任务开启
 			item.setEnabled(false);
 			item.setIcon(R.drawable.downloading);
-			new Thread(new DownloadThread(this, mHandler, book)).start();
+			intent = new Intent(this, DownloadService.class);
+			intent.putExtra(IntentConstant.BOOK_INFO, book);
+			startService(intent);
 			break;
 		}
 		return true;

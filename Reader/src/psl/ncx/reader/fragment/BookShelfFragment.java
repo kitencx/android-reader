@@ -10,13 +10,17 @@ import psl.ncx.reader.adapter.BookShelfAdapter;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
+import psl.ncx.reader.service.DownloadService;
 import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Fragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -36,6 +40,22 @@ public class BookShelfFragment extends Fragment {
 	private ActionBar mActionBar;
 	private GridView mGrid;
 	private ImageView anim;
+	private BroadcastReceiver receiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			//接收到广播，更新UI
+			int finished = intent.getIntExtra("FINISHED", 0);
+			String bookid = intent.getStringExtra("BOOKID");
+			int position = getPostionByBookId(bookid);
+			Book book = (Book) mGrid.getItemAtPosition(position);
+			if (book != null) {
+				//因为Adapter是在异步任务中建立的，所以不能保证广播接收器注册的时候已经可以获取到Book
+				//此处加入null判断，当可以获取到的时候，才进行更新
+				book.percent = finished;
+				mGrid.invalidateViews();
+			}
+		}
+	};
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -120,6 +140,23 @@ public class BookShelfFragment extends Fragment {
 	public void onStart() {
 		super.onStart();
 		new LoadBookShelf().execute();
+		getActivity().registerReceiver(receiver, new IntentFilter(DownloadService.class.getName()));
+	}
+	
+	@Override
+	public void onStop() {
+		super.onStop();
+		getActivity().unregisterReceiver(receiver);
+	}
+	
+	private int getPostionByBookId(String bookid) {
+		for (int i = 0; i < mGrid.getCount(); i++) {
+			Book book = (Book) mGrid.getItemAtPosition(i);
+			if (book.bookid.equals(bookid)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 	
 	/**
@@ -147,6 +184,7 @@ public class BookShelfFragment extends Fragment {
 			mGrid.setVisibility(View.VISIBLE);
 			BookShelfAdapter adapter = new BookShelfAdapter(getActivity(), result);
 			mGrid.setAdapter(adapter);
+			
 		}
 	}
 }

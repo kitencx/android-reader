@@ -30,4 +30,6 @@ public class Book implements Serializable{
 	public String cover;
 	/**简介页链接*/
 	public String summaryURL;
+	/**下载百分比*/
+	public int percent;
 }

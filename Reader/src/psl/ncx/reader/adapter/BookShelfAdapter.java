@@ -47,6 +47,10 @@ public class BookShelfAdapter extends BaseAdapter {
 		}
 		Book book = getItem(position);
 		cover.setTitle(book.bookname);
+		if (book.percent != 0){
+			//如果有百分比，绘制背景渐变
+			cover.setPercent(book.percent);
+		}
 		Bitmap img = null;
 		if(book.cover != null) img = DataAccessUtil.loadCoverImage(context, book.cover);
 		if(img == null){

@@ -20,7 +20,6 @@ public class MainActivity extends Activity {
 	 * */
 	private MenuItem mSearchItem;
 	
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -28,6 +27,7 @@ public class MainActivity extends Activity {
 		
 		mActionBar = getActionBar();
 		mActionBar.hide();
+
 	}
 	
 	@Override

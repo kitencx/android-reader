@@ -49,6 +49,7 @@
             android:label=""
             android:icon="@drawable/navigation_back">
         </activity>
+        <service android:name="psl.ncx.reader.service.DownloadService"></service>
     </application>
 
 </manifest>
