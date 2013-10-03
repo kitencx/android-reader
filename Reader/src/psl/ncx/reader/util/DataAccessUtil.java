@@ -151,4 +151,13 @@ public class DataAccessUtil {
 		System.out.println("当前图片从缓存中载入!");
 		return BitmapFactory.decodeFile(cacheFile.getPath(), opts);
 	}
+	
+	/**
+	 * 判断指定的缓存文件是否存在
+	 * @return true：存在，false：不存在
+	 * */
+	public static boolean exists(Context context, String filename) {
+		File contentFile = new File(context.getCacheDir(), filename);
+		return contentFile.exists();
+	}
 }

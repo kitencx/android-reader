@@ -44,14 +44,15 @@ public class BookShelfFragment extends Fragment {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			//接收到广播，更新UI
-			int finished = intent.getIntExtra("FINISHED", 0);
+			int percent = intent.getIntExtra(IntentConstant.DOWNLOAD_PERCENT, 0);
+			System.out.println(percent);
 			String bookid = intent.getStringExtra("BOOKID");
 			int position = getPostionByBookId(bookid);
 			Book book = (Book) mGrid.getItemAtPosition(position);
 			if (book != null) {
 				//因为Adapter是在异步任务中建立的，所以不能保证广播接收器注册的时候已经可以获取到Book
 				//此处加入null判断，当可以获取到的时候，才进行更新
-				book.percent = finished;
+				book.percent = percent;
 				mGrid.invalidateViews();
 			}
 		}
@@ -184,7 +185,7 @@ public class BookShelfFragment extends Fragment {
 			mGrid.setVisibility(View.VISIBLE);
 			BookShelfAdapter adapter = new BookShelfAdapter(getActivity(), result);
 			mGrid.setAdapter(adapter);
-			
+
 		}
 	}
 }

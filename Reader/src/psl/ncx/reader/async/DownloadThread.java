@@ -7,6 +7,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import psl.ncx.reader.business.ContentResolver;
+import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.model.ChapterLink;
 import psl.ncx.reader.service.DownloadService;
@@ -24,10 +25,6 @@ public class DownloadThread extends Thread {
 	 * */
 	private Book mBook;
 	/**
-	 * 当前正在下载的章节
-	 * */
-	private int mCurrentPage;
-	/**
 	 * handler，用于更新UI
 	 * */
 	public DownloadThread(Context context, Book book){
@@ -42,17 +39,6 @@ public class DownloadThread extends Thread {
 		return mBook;
 	}
 	
-	/**
-	 * 取得当前正在下载的章节索引
-	 * */
-	public int currentPage() {
-		return mCurrentPage;
-	}
-	
-	public int maxPages() {
-		return mBook.catalog.size();
-	}
-	
 	@Override
 	public void run() {
 		ArrayList<ChapterLink> chapters = mBook.catalog;
@@ -60,6 +46,7 @@ public class DownloadThread extends Thread {
 		if (chapters == null) return;
 		
 		int size = chapters.size();
+		int percent = 0;
 		for (int i = 0 ; i < size; i++) {
 			if (Thread.currentThread().isInterrupted()) {
 				//每个循环都检查是否中断，如果中断，那么结束本任务
@@ -69,20 +56,29 @@ public class DownloadThread extends Thread {
 			ChapterLink chapter = chapters.get(i);
 			String title = chapter.title;
 			String link = chapter.link;
-			mCurrentPage = i + 1;
 			try {
-				Document doc = Jsoup.connect(link).timeout(10000).get();
-				String content = ContentResolver.resolveContent(doc, mBook.from);
-				DataAccessUtil.storeTextContent(context, content, mBook.bookid + "-" + title + ".txt");
-				Intent intent = new Intent(DownloadService.class.getName());
-				intent.putExtra("FINISHED", mCurrentPage * 100 / size);
-				intent.putExtra("BOOKID", mBook.bookid);
-				context.sendBroadcast(intent);
+				String filename = mBook.bookid + "-" + title + ".txt";
+				if (!DataAccessUtil.exists(context, filename)) {
+					Document doc = Jsoup.connect(link).timeout(10000).get();
+					String content = ContentResolver.resolveContent(doc, mBook.from);
+					DataAccessUtil.storeTextContent(context, content, filename);
+				}
+				if (percent != (i + 1) * 100 / size) {
+					//完成百分比发生改变，发送广播更新UI
+					percent = (i + 1) * 100 / size;
+					Intent intent = new Intent(DownloadService.class.getName());
+					intent.putExtra(IntentConstant.DOWNLOAD_PERCENT, percent);
+					intent.putExtra("BOOKID", mBook.bookid);
+					context.sendBroadcast(intent);
+				}
 			} catch (IOException e) {
 				//忽略当前的，继续下一个任务
 			}
-			
 		}
+		//任务结束，无论下载至何处，都发送结束信号
+		Intent intent = new Intent(DownloadService.class.getName());
+		intent.putExtra(IntentConstant.DOWNLOAD_PERCENT, 100);
+		intent.putExtra("BOOKID", mBook.bookid);
+		context.sendBroadcast(intent);
 	}
-
 }

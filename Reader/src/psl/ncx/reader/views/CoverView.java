@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.text.TextPaint;
+import android.util.AttributeSet;
 import android.widget.ImageView;
 
 /**
@@ -31,8 +32,16 @@ public class CoverView extends ImageView {
 	 * */
 	private Rect bg_rect;
 	
-	public CoverView(Context context){
+	public CoverView(Context context) {
 		super(context);
+		
+		this.paint = new TextPaint();
+		paint.setTextSize(15.0f);
+		paint.setAntiAlias(true);
+	}
+	
+	public CoverView(Context context, AttributeSet attr) {
+		super(context, attr);
 		
 		this.paint = new TextPaint();
 		paint.setTextSize(15.0f);

@@ -30,6 +30,15 @@ public class DownloadService extends Service {
 	}
 	
 	@Override
+	public void onDestroy() {
+		for (int i = 0; i < mAllTask.size(); i++) {
+			Thread task = mAllTask.get(i).get();
+			task.interrupt();
+		}
+		super.onDestroy();
+	}
+	
+	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Book book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		Thread task = new DownloadThread(this, book);

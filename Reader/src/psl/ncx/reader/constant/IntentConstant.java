@@ -10,4 +10,6 @@ public interface IntentConstant {
 	public static final String BOOK_INFO = "psl.ncx.reader.open.bookinfo";
 	/**打开小说的章节索引，传递的值为int*/
 	public static final String OPEN_INDEX = "psl.ncx.reader.open.index";
+	/**下载完成度*/
+	public static final String DOWNLOAD_PERCENT = "psl.ncx.reader.dlpercent";
 }
