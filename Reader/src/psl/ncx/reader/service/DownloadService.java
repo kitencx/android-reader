@@ -29,6 +29,9 @@ public class DownloadService extends Service {
 		mAllTask = new ArrayList<WeakReference<Thread>>();
 	}
 	
+	/**
+	 * 停止Service的时候终止所有的下载线程
+	 * */
 	@Override
 	public void onDestroy() {
 		for (int i = 0; i < mAllTask.size(); i++) {

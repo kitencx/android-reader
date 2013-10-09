@@ -133,11 +133,21 @@ public class DBAccessHelper {
 	
 	/**
 	 * 删除数据库中指定bookid的所有条目，包括章节信息，注意删除封面图片，此次删除操作不包括该图片
+	 * @return 删除成功true，否则false
 	 * */
-	public static void removeBookById(Context context, String bookid){
+	public static boolean removeBookById(Context context, String bookid){
+		boolean result = false;
 		SQLiteDatabase db = new DBOpenHelper(context).getWritableDatabase();
-		db.delete(BookEntry.TABLE_NAME, BookEntry._ID + "=?", new String[]{bookid});
-		db.delete(ChapterEntry.TABLE_NAME, ChapterEntry.COLUMN_BOOK_ID  + "=?", new String[]{bookid});
+		db.beginTransaction();
+		int result1 = db.delete(BookEntry.TABLE_NAME, BookEntry._ID + "=?", new String[]{bookid});
+		int result2 = db.delete(ChapterEntry.TABLE_NAME, ChapterEntry.COLUMN_BOOK_ID  + "=?", new String[]{bookid});
+		if (result1 != 0 && result2 != 0) {
+			//都成功，则事件成功
+			db.setTransactionSuccessful();
+			result = true;
+		}
+		db.endTransaction();
 		db.close();
+		return result;
 	}
 }

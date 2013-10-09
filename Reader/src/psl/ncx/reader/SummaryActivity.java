@@ -158,8 +158,9 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 		
 		@Override
 		protected void onPostExecute(Void result) {
-			if (book.catalog != null)
-				if (DBAccessHelper.insert(SummaryActivity.this, book) == -1) {
+			if (book.catalog != null) {
+				long bookid = DBAccessHelper.insert(SummaryActivity.this, book);
+				if (bookid == -1) {
 					//目录获取成功，加入书架，如果失败，则删除封面，并提示重试
 					deleteFile(book.cover);
 					holder.mButtonCollect.setText(R.string.button_collect);
@@ -173,6 +174,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 						}
 					}).show();
 				} else {
+					book.bookid = String.valueOf(bookid);
 					holder.mButtonCollect.setText("阅读");
 					holder.mButtonCollect.setOnClickListener(new OnClickListener() {
 						@Override
@@ -184,6 +186,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 						}
 					});
 				}
+			}
 		}
 		
 	}
@@ -212,7 +215,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 		@Override
 		protected void onPostExecute(Void result) {
 			if (cover != null) holder.mCoverImage.setImageBitmap(cover);
-			if (book.summary != null) holder.mTextSummary.setText(book.summary);
+			if (book.summary != null) holder.mTextSummary.setText("简介：\n" + book.summary);
 		}
 	}
 }

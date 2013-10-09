@@ -63,14 +63,11 @@ public class DownloadThread extends Thread {
 					String content = ContentResolver.resolveContent(doc, mBook.from);
 					DataAccessUtil.storeTextContent(context, content, filename);
 				}
-				if (percent != (i + 1) * 100 / size) {
-					//完成百分比发生改变，发送广播更新UI
-					percent = (i + 1) * 100 / size;
-					Intent intent = new Intent(DownloadService.class.getName());
-					intent.putExtra(IntentConstant.DOWNLOAD_PERCENT, percent);
-					intent.putExtra("BOOKID", mBook.bookid);
-					context.sendBroadcast(intent);
-				}
+				percent = (i + 1) * 100 / size;
+				Intent intent = new Intent(DownloadService.class.getName());
+				intent.putExtra(IntentConstant.DOWNLOAD_PERCENT, percent);
+				intent.putExtra("BOOKID", mBook.bookid);
+				context.sendBroadcast(intent);
 			} catch (IOException e) {
 				//忽略当前的，继续下一个任务
 			}

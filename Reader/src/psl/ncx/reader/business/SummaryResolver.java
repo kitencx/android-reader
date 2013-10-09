@@ -22,10 +22,10 @@ public class SummaryResolver {
 	 * */
 	public static String resolveSummary(Document doc, Book output, String site){
 		if (SupportSite.WJZW.equals(site)) {
-			return new SummaryResolver().resolveSummaryInLJZW(doc, output);
-		} else if (SupportSite.LJZW.equals(site)) {
 			return new SummaryResolver().resolveSummaryInWJZW(doc, output);
-		}
+		} else if (SupportSite.LJZW.equals(site)) {
+			return new SummaryResolver().resolveSummaryInLJZW(doc, output);
+		} 
 		return null;
 	}
 	
@@ -45,20 +45,21 @@ public class SummaryResolver {
 	}
 	
 	/**
-	 * 五九中文
+	 * 伍九中文
 	 * 简介信息:span.hottext 内容简介：之后的同级元素
 	 * */
 	private String resolveSummaryInWJZW(Document doc, Book output){
-		Elements hottext = doc.select("span.hottext");
-		for (Element e : hottext){
-			if (e.text().contains("内容简介")){
-				Element parent = e.parent();
-				String alltext = parent.text();
-				String intro = alltext.substring(alltext.indexOf("内容简介") + "内容简介".length());
-				if (intro.length() > 0) output.summary = intro.substring(1);
-				Elements img = parent.select("img");
-				if (img.size() > 0) return img.first().absUrl("src");
-				break;
+		Elements e = doc.select(".hottext");
+		e = e.parents();
+		if (!e.isEmpty()) {
+			Element td = e.first();
+			
+			if (output.summary == null) output.summary = td.ownText();
+			
+			Elements imgs = td.select("img");
+			if (imgs.size() > 0) {
+				Element img = imgs.first();
+				return img.absUrl("src");
 			}
 		}
 		
