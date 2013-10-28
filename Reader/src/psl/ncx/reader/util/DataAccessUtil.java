@@ -120,7 +120,6 @@ public class DataAccessUtil {
 			while((length = reader.read(buf)) != -1){
 				sb.append(buf, 0, length);
 			}
-			System.out.println("当前内容从缓存中载入!");
 			return sb.toString();
 		} catch (FileNotFoundException e) {
 			//已经判断存在，不会发生

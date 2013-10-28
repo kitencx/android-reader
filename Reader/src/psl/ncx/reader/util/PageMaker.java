@@ -197,8 +197,7 @@ public class PageMaker {
 		this.drawableWidth = width - marginLeft - marginRight - paddingLeft - paddingRight;
 		this.drawableHeight = height - marginTop - marginBottom - paddingTop - paddingBottom;
 		if(paint != null){
-			float textsize = paint.getTextSize();
-			this.lineCount = (int)(drawableHeight/textsize);
+			this.lineCount = (int)(drawableHeight/paint.getFontSpacing());
 		}
 	}
 }

@@ -57,7 +57,7 @@ public class DownloadThread extends Thread {
 			String title = chapter.title;
 			String link = chapter.link;
 			try {
-				String filename = mBook.bookid + "-" + title + ".txt";
+				String filename = mBook.bookid + "-" + title.replaceAll("[/\\s\\.\\\\]", "") + ".txt";
 				if (!DataAccessUtil.exists(context, filename)) {
 					Document doc = Jsoup.connect(link).timeout(10000).get();
 					String content = ContentResolver.resolveContent(doc, mBook.from);

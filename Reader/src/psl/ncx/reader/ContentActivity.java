@@ -1,7 +1,6 @@
 package psl.ncx.reader;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,8 +13,8 @@ import psl.ncx.reader.service.DownloadService;
 import psl.ncx.reader.util.BitmapUtil;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
-import psl.ncx.reader.util.PageMaker;
 import psl.ncx.reader.views.PagedView;
+import psl.ncx.reader.views.PagedView.OnPagingListener;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -64,10 +63,6 @@ public class ContentActivity extends Activity {
 	 * */
 	private int position;
 	/**
-	 * 文本分页工具类
-	 * */
-	private PageMaker maker;
-	/**
 	 * 翻页事件监听
 	 * */
 	private PageDownListener listener;
@@ -78,8 +73,32 @@ public class ContentActivity extends Activity {
 	/**
 	 * 手势检测，图片章节和文本章节的手势检测是不同的
 	 * */
-	private GestureDetector textGesture;
 	private GestureDetector imgGesture;
+	private GestureDetector textGesture;
+	
+	private OnPagingListener pagingListener = new OnPagingListener() {
+
+		@Override
+		public void onPageUp(View v) {
+		}
+
+		@Override
+		public void onPageDown(View v) {
+		}
+
+		@Override
+		public void onPageOverForward(View v) {
+			position++;
+			new LoadContent().execute();
+		}
+
+		@Override
+		public void onPageOverBack(View v) {
+			position--;
+			new LoadContent().execute();
+		}
+		
+	};
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -92,8 +111,21 @@ public class ContentActivity extends Activity {
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 		
-		textGesture = new GestureDetector(this, new FlipOverGestureForText());
 		imgGesture = new GestureDetector(this, new FlipOverGestureForImage());
+		textGesture = new GestureDetector(this, new SimpleOnGestureListener(){
+			@Override
+			public boolean onSingleTapConfirmed(MotionEvent e) {
+				//点击显示ActionBar
+				int cx = screenSize.x / 2, cy = screenSize.y / 2;
+				float x = e.getX(), y = e.getY();
+				if (x > cx - 100 && x < cx + 100 && y > cy -100 && y < cy + 100) {
+					if(mActionBar.isShowing()) mActionBar.hide();
+					else mActionBar.show();
+					return true;
+				}
+				return false;
+			}
+		}); 
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
@@ -182,6 +214,7 @@ public class ContentActivity extends Activity {
 				bitmap.recycle();
 				bitmap = null;
 			}
+			if (contentView != null) contentView.abortAnimation();
 			//显示载入动画
 			setContentView(R.layout.loading);
 			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
@@ -194,13 +227,14 @@ public class ContentActivity extends Activity {
 				position = book.bookmark;
 				book.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, book.bookid);
 			}
-			String cname = book.catalog.get(position).title; 
+			String cname = book.catalog.get(position).title.replaceAll("[/\\s\\.\\\\]", ""); 
 			String url = book.catalog.get(position).link;
 			
 			//先从缓存中读取内容
 			String textContent = DataAccessUtil
 					.loadTextContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".txt");
 			if (textContent != null) {
+				System.out.println("缓存载入");
 				return textContent;
 			}
 			bitmap = DataAccessUtil
@@ -330,19 +364,13 @@ public class ContentActivity extends Activity {
 		private void showTextContent(String result){
 			setContentView(R.layout.activity_content);
 			result = replacePunctuMarks(result);
+			System.out.println(result.length());
 			contentView = (PagedView) findViewById(R.id.view_content);
 			contentView.setLongClickable(true);
-			
-			maker = new PageMaker(result, screenSize.x, screenSize.y, contentView.getPaint());
-			maker.setPadding(contentView.getPaddingLeft(), contentView.getPaddingTop(), 
-					contentView.getPaddingRight(), contentView.getPaddingBottom());
-
-			//新章节载入，重置分页工具类状态
-			maker.reset();
-			//获取第一页，并显示
+			contentView.enableDragOver(true);
 			contentView.setTitle(book.catalog.get(position).title);
-			contentView.setContent(maker.nextPage());
-			//添加翻页事件监听
+			contentView.setText(result);
+			contentView.setOnPagingListener(pagingListener);
 			contentView.setOnTouchListener(listener);
 		}
 	}
@@ -356,57 +384,10 @@ public class ContentActivity extends Activity {
 		public boolean onTouch(View v, MotionEvent event) {
 			if(v instanceof ScrollView){
 				return imgGesture.onTouchEvent(event);
-			}else if(v instanceof PagedView){
+			} else if (v instanceof PagedView) {
 				return textGesture.onTouchEvent(event);
 			}
 			return false;
-		}
-	}
-	
-	/**
-	 * 手势检测，用于文本章节
-	 * */
-	private class FlipOverGestureForText extends SimpleOnGestureListener{
-		@Override
-		public boolean onSingleTapConfirmed(MotionEvent e) {
-			//点击显示ActionBar
-			if(mActionBar.isShowing()) mActionBar.hide();
-			else mActionBar.show();
-			return true;
-		}
-		
-		@Override
-		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
-				float velocityY) {
-			if(e2.getX() - e1.getX() > 100){
-				/*向右滑动，后退翻页*/
-				if(maker.prePage()){
-					ArrayList<String> page = maker.nextPage();
-					contentView.setContent(page);
-				}else{
-					if(position - 1 >= 0){
-						position--;
-						new LoadContent().execute();
-						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
-						contentView.setOnTouchListener(null);
-					}
-				}
-			}else if(e1.getX() - e2.getX() > 100){
-				/*向左滑动，前进翻页*/
-				ArrayList<String> page = maker.nextPage();
-				if(page != null)	contentView.setContent(page);
-				else{
-					if(position + 1 < book.catalog.size()){
-						position++;
-						new LoadContent().execute();
-						//载入新章节任务启动后，移除点击事件，防止连点造成的连续翻页
-						contentView.setOnTouchListener(null);
-					}
-				}
-			}
-			
-			//无论何种情况，都消耗该事件
-			return true;
 		}
 	}
 	
