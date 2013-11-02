@@ -147,7 +147,6 @@ public class DataAccessUtil {
 		BitmapFactory.Options opts = new BitmapFactory.Options();
 		opts.inPreferredConfig = Bitmap.Config.ARGB_4444;
 		
-		System.out.println("当前图片从缓存中载入!");
 		return BitmapFactory.decodeFile(cacheFile.getPath(), opts);
 	}
 	

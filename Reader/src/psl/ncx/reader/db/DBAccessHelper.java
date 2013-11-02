@@ -1,6 +1,7 @@
 package psl.ncx.reader.db;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import psl.ncx.reader.constant.TableContract.BookEntry;
 import psl.ncx.reader.constant.TableContract.ChapterEntry;
@@ -149,5 +150,37 @@ public class DBAccessHelper {
 		db.endTransaction();
 		db.close();
 		return result;
+	}
+	
+	/**
+	 * 插入一个新的章节信息
+	 * @param context
+	 * @param newChapter 新章节
+	 * @param owner 新章节是属于哪本书籍
+	 * @return 返回插入的结果，如果成功，返回插入行的id，否则返回-1
+	 * */
+	public static long addNewChapter(Context context, ChapterLink newChapter, Book owner) {
+		SQLiteDatabase db = new DBOpenHelper(context).getWritableDatabase();
+		ContentValues values = new ContentValues();
+		values.put(ChapterEntry.COLUMN_BOOK_ID, owner.bookid);
+		values.put(ChapterEntry.COLUMN_BOOKNAME, owner.bookname);
+		values.put(ChapterEntry.COLUMN_CHAPTERNAME, newChapter.title);
+		values.put(ChapterEntry.COLUMN_CHAPTERURL, newChapter.link);
+		long result = db.insert(ChapterEntry.TABLE_NAME, null, values);
+		db.close();
+		return result;
+	}
+	
+	public static void addNewChapter(Context context, List<ChapterLink> newChapters, Book owner) {
+		SQLiteDatabase db = new DBOpenHelper(context).getWritableDatabase();
+		for (ChapterLink newChapter : newChapters) {
+			ContentValues values = new ContentValues();
+			values.put(ChapterEntry.COLUMN_BOOK_ID,  owner.bookid);
+			values.put(ChapterEntry.COLUMN_BOOKNAME, owner.bookname);
+			values.put(ChapterEntry.COLUMN_CHAPTERNAME, newChapter.title);
+			values.put(ChapterEntry.COLUMN_CHAPTERURL, newChapter.link);
+			db.insert(ChapterEntry.TABLE_NAME, null, values);
+		}
+		db.close();
 	}
 }

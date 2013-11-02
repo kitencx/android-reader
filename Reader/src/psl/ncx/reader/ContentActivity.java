@@ -130,6 +130,8 @@ public class ContentActivity extends Activity {
 		
 		Intent intent = getIntent();
 		book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
+		if (book.catalog == null) book.catalog = DBAccessHelper.queryChaptersById(this, book.bookid);
+		position = book.bookmark < 0 ? 0 : book.bookmark;
 		
 		new LoadContent().execute();
 	}
@@ -223,18 +225,12 @@ public class ContentActivity extends Activity {
 		
 		@Override
 		protected String doInBackground(Void... params) {
-			if(book.catalog == null){
-				position = book.bookmark;
-				book.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, book.bookid);
-			}
 			String cname = book.catalog.get(position).title.replaceAll("[/\\s\\.\\\\]", ""); 
 			String url = book.catalog.get(position).link;
-			
 			//先从缓存中读取内容
 			String textContent = DataAccessUtil
 					.loadTextContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".txt");
 			if (textContent != null) {
-				System.out.println("缓存载入");
 				return textContent;
 			}
 			bitmap = DataAccessUtil
@@ -261,12 +257,7 @@ public class ContentActivity extends Activity {
 				}
 				if(bitmaps.length > 1){
 					//合并一个章节的所有图片
-					try{
-						bitmap = BitmapUtil.combineBitmaps(bitmaps);
-					} catch (OutOfMemoryError e){
-						e.printStackTrace();
-						return null;
-					}
+					bitmap = BitmapUtil.combineBitmaps(bitmaps);
 				}else{
 					bitmap = bitmaps[0];
 				}
@@ -364,7 +355,6 @@ public class ContentActivity extends Activity {
 		private void showTextContent(String result){
 			setContentView(R.layout.activity_content);
 			result = replacePunctuMarks(result);
-			System.out.println(result.length());
 			contentView = (PagedView) findViewById(R.id.view_content);
 			contentView.setLongClickable(true);
 			contentView.enableDragOver(true);

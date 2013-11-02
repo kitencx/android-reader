@@ -228,11 +228,12 @@ public class PagedView extends View {
 	 * 返回下一页内容，如果没有下一页，则返回null
 	 * */
 	public ArrayList<String> nextPage() {
+		mTextPaint.setTextSize(21.0f);
 		int lineCount = (int) ((getHeight() - getPaddingBottom() - getPaddingTop()) / mTextPaint.getFontSpacing());
 		int drawWidth = getWidth() - getPaddingLeft() - getPaddingRight();
 		
 		if (mEndPos >= mContent.length()) return null;
-		
+
 		ArrayList<String> content = new ArrayList<String>();
 		while (content.size() < lineCount && mEndPos < mContent.length()) {
 			String para = readParagraphForward(mEndPos);
@@ -280,13 +281,13 @@ public class PagedView extends View {
 	
 	@Override
 	protected void onDraw(Canvas canvas) {
-		mTextPaint.setTextSize(16.0f);
+		//绘制标题
 		if (mTitle != null) {
-			//绘制标题
+			mTextPaint.setTextSize(16.0f);
 			float length = mTextPaint.measureText(mTitle);
 			canvas.drawText(mTitle, (getWidth() - length)/2, mTextPaint.getFontSpacing(), mTextPaint);
 		}
-		
+		//绘制内容
 		mTextPaint.setTextSize(21.0f);
 		float dx = mMovedPointer.x - mDownPointer.x;
 		float space = mTextPaint.getFontSpacing();
@@ -298,10 +299,7 @@ public class PagedView extends View {
 				canvas.drawText(str, x - getWidth(), y, mTextPaint);
 				y += space;
 			}
-		} else {
-			//如果没有内容，表示要翻页，绘制翻页内容
-			drawNavigation(canvas, 0, dx);
-		}
+		} 
 		
 		if (mCurPage == null && mPages.size() > 0) mCurPage = mPages.get(mCurPointer);
 		if (mCurPage != null) {
@@ -319,7 +317,7 @@ public class PagedView extends View {
 				y += space;
 			}
 		}
-		
+		//绘制页码
 		drawPageFooter(canvas);
 	}
 	
@@ -344,32 +342,6 @@ public class PagedView extends View {
 		ArrayList<String> page = null;
 		while ((page = nextPage()) != null) {
 			mPages.add(page);
-		}
-	}
-	
-	/**
-	 * 绘制翻页导航内容
-	 * @param canvas 
-	 * @param direct 导航方向,0-1-2-3:左-上-右-下
-	 **/
-	private void drawNavigation(Canvas canvas, int direct, float dx) {
-		switch (direct) {
-		case 0:
-			float x = dx - getWidth();
-			canvas.drawLine(455 + x, 375, 405 + x, 375, mTextPaint);
-			canvas.drawLine(405 + x, 375, 405 + x, 350, mTextPaint);
-			canvas.drawLine(405 + x, 350, 380 + x, 400, mTextPaint);
-			canvas.drawLine(380 + x, 400, 405 + x, 450, mTextPaint);
-			canvas.drawLine(405 + x, 450, 405 + x, 400, mTextPaint);
-			canvas.drawLine(405 + x, 400, 455 + x, 400, mTextPaint);
-			canvas.drawLine(455 + x, 400, 455 + x, 375, mTextPaint);
-			break;
-		case 1:
-			break;
-		case 2:
-			break;
-		case 3:
-			break;
 		}
 	}
 	

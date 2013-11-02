@@ -43,6 +43,10 @@ public class BookShelfFragment extends Fragment {
 	private BookShelfAdapter mAdapter;
 	private ArrayList<Book> mData;
 	/**
+	 * 工具栏Fragment
+	 * */
+	private ToolBarFragment mToolBar;
+	/**
 	 * 处理界面更新
 	 * */
 	private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -182,6 +186,10 @@ public class BookShelfFragment extends Fragment {
 			//显示新载入的内容
 			mData.addAll(books);
 			mAdapter.notifyDataSetChanged();
+			//允许更新，使更新按钮可用
+			mToolBar = (ToolBarFragment)getFragmentManager().findFragmentByTag("toolbar");
+			mToolBar.setUpdateEnabled(true);
+			mToolBar.setBooks(mData);
 		}
 	}
 	
