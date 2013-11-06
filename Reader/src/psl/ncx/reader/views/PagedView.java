@@ -325,12 +325,19 @@ public class PagedView extends View {
 	 * 
 	 * */
 	private void drawPageFooter(Canvas canvas) {
-		mTextPaint.setTextSize(16.0f);
-		float y = getHeight() - mTextPaint.getFontSpacing();
-		String footer = "第" + (mCurPointer + 1) + "/" + mPages.size() + "页";
-		float length = mTextPaint.measureText(footer);
-		float x = (getWidth() - length)/2;
-		canvas.drawText(footer, x, y, mTextPaint);
+		if (mPages.size() > 0) {
+			mTextPaint.setTextSize(16.0f);
+			float y = getHeight() - mTextPaint.getFontSpacing();
+			String footer = "第" + (mCurPointer + 1) + "/" + mPages.size() + "页";
+			float length = mTextPaint.measureText(footer);
+			float x = (getWidth() - length)/2;
+			canvas.drawText(footer, x, y, mTextPaint);
+		} else {
+			//没有页面，表示当前页面获取内容有问题，显示一个提示语句
+			String hint = "啊哦，获取不到本章节的内容信息，很抱歉！";
+			float length = mTextPaint.measureText(hint);
+			canvas.drawText(hint, (mScreenSize.x - length)/2, mScreenSize.y/2, mTextPaint);
+		}
 	}
 	
 	/**

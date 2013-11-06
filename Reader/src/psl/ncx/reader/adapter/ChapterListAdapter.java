@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import psl.ncx.reader.R;
 import psl.ncx.reader.model.ChapterLink;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -45,7 +44,6 @@ public class ChapterListAdapter extends BaseAdapter {
 		this.selectedItem = position;
 	}
 	
-	@SuppressLint("NewApi")
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		TextView chapter;

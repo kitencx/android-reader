@@ -188,7 +188,6 @@ public class BookShelfFragment extends Fragment {
 			mAdapter.notifyDataSetChanged();
 			//允许更新，使更新按钮可用
 			mToolBar = (ToolBarFragment)getFragmentManager().findFragmentByTag("toolbar");
-			mToolBar.setUpdateEnabled(true);
 			mToolBar.setBooks(mData);
 		}
 	}

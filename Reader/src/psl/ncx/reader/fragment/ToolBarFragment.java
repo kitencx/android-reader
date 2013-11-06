@@ -57,7 +57,6 @@ public class ToolBarFragment extends Fragment {
 		});
 		
 		mbtnUpdate = (ImageButton) fragment.findViewById(R.id.update);
-		mbtnUpdate.setEnabled(false);	//默认无法点击，需要等待AdapterView加载完毕
 		mbtnUpdate.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -67,10 +66,6 @@ public class ToolBarFragment extends Fragment {
 		});
 		
 		return fragment;
-	}
-	
-	public void setUpdateEnabled(boolean flag) {
-		mbtnUpdate.setEnabled(true);
 	}
 	
 	public void setBooks(List<Book> books) {
@@ -89,6 +84,7 @@ public class ToolBarFragment extends Fragment {
 							@Override
 							public void onClick(DialogInterface source, int which) {
 								source.dismiss();
+								mbtnUpdate.setEnabled(true);
 							}
 						}).show();
 			} else {

@@ -1,16 +1,16 @@
 package psl.ncx.reader;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.jsoup.Jsoup;
+import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.service.DownloadService;
-import psl.ncx.reader.util.BitmapUtil;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.views.PagedView;
@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -39,7 +38,6 @@ import android.widget.ScrollView;
 
 public class ContentActivity extends Activity {
 	private final String CONNECT_FAILED = "connect_failed";
-	private final String IMAGE_CONTENT = "image_content";
 	/**
 	 * 标识是否开启内容缓存
 	 * */
@@ -48,12 +46,7 @@ public class ContentActivity extends Activity {
 	 * 页面组件
 	 * */
 	private PagedView contentView;
-	private ScrollView scrollView;
 	private ActionBar mActionBar;
-	/**
-	 * 图片章节的内容
-	 * */
-	private Bitmap bitmap;
 	/**
 	 * 当前阅读的Book对象
 	 * */
@@ -71,9 +64,8 @@ public class ContentActivity extends Activity {
 	 * */
 	private Point screenSize;
 	/**
-	 * 手势检测，图片章节和文本章节的手势检测是不同的
+	 * 手势检测
 	 * */
-	private GestureDetector imgGesture;
 	private GestureDetector textGesture;
 	
 	private OnPagingListener pagingListener = new OnPagingListener() {
@@ -111,7 +103,6 @@ public class ContentActivity extends Activity {
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 		
-		imgGesture = new GestureDetector(this, new FlipOverGestureForImage());
 		textGesture = new GestureDetector(this, new SimpleOnGestureListener(){
 			@Override
 			public boolean onSingleTapConfirmed(MotionEvent e) {
@@ -166,6 +157,11 @@ public class ContentActivity extends Activity {
 	}
 	
 	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		return textGesture.onTouchEvent(event);
+	}
+	
+	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		switch(requestCode){
 		case 0:
@@ -211,15 +207,11 @@ public class ContentActivity extends Activity {
 	class LoadContent extends AsyncTask<Void, Void, String>{
 		@Override
 		protected void onPreExecute() {
-			//新任务启动，释放当前的图片内容
-			if(bitmap != null){
-				bitmap.recycle();
-				bitmap = null;
-			}
 			if (contentView != null) contentView.abortAnimation();
 			//显示载入动画
 			setContentView(R.layout.loading);
 			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
+			processing.setOnTouchListener(listener);
 			processing.startAnimation(AnimationUtils.loadAnimation(ContentActivity.this, R.drawable.processing));
 		}
 		
@@ -231,12 +223,12 @@ public class ContentActivity extends Activity {
 			String textContent = DataAccessUtil
 					.loadTextContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".txt");
 			if (textContent != null) {
-				return textContent;
-			}
-			bitmap = DataAccessUtil
-					.loadImageContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".png");
-			if (bitmap != null) {
-				return IMAGE_CONTENT;
+				if (textContent.equals("")) {	//删除不包含内容的缓存文件
+					File file = new File(getCacheDir(), book.bookid + "-" + cname + ".txt");
+					file.delete();
+				} else {
+					return textContent;
+				}
 			}
 			
 			if (!HttpUtil.hasAvaliableNetwork(ContentActivity.this)) return null;
@@ -248,28 +240,9 @@ public class ContentActivity extends Activity {
 				return CONNECT_FAILED;
 			}
 			
-			//先检查是否是图片章节
-			Elements contentNode = doc.select(".imagecontent");
-			if(!contentNode.isEmpty()){
-				Bitmap[] bitmaps = new Bitmap[contentNode.size()];
-				for(int i = 0; i < bitmaps.length; i++){
-					bitmaps[i] = HttpUtil.loadImageFromURL(ContentActivity.this, contentNode.get(i).absUrl("src"));
-				}
-				if(bitmaps.length > 1){
-					//合并一个章节的所有图片
-					bitmap = BitmapUtil.combineBitmaps(bitmaps);
-				}else{
-					bitmap = bitmaps[0];
-				}
-				if(bitmap == null) return CONNECT_FAILED;
-				
-				if(useCache) DataAccessUtil.storeImageContent(ContentActivity.this, 
-						bitmap, book.bookid + "-" + cname + ".png");
-				return IMAGE_CONTENT;
-			}
 			//文本章节
 			String content = psl.ncx.reader.business.ContentResolver.resolveContent(doc, book.from);
-			if (useCache)
+			if (useCache && !StringUtil.isBlank(content))
 				DataAccessUtil.storeTextContent(ContentActivity.this, content, book.bookid + "-" + cname + ".txt");
 			return content;
 		}
@@ -287,8 +260,6 @@ public class ContentActivity extends Activity {
 				});
 			}else if(CONNECT_FAILED.equals(result)){
 				showConnectFailed(result);
-			}else if(IMAGE_CONTENT.equals(result)){
-				showImageContent(result);
 			}else{
 				showTextContent(result);
 			}
@@ -337,19 +308,6 @@ public class ContentActivity extends Activity {
 		}
 		
 		/**
-		 * 显示图片章节内容
-		 * */
-		private void showImageContent(String result){
-			setContentView(R.layout.activity_content_image);
-			ImageView imageView = (ImageView) findViewById(R.id.imageview_content);
-			scrollView = (ScrollView)imageView.getParent();
-
-			imageView.setImageBitmap(bitmap);
-			//如果给ImageView添加事件响应的话，因为ACTION_MOVE事件会被拦截，导致无法检测手势
-			scrollView.setOnTouchListener(listener);
-		}
-		
-		/**
 		 * 显示文本章节内容
 		 * */
 		private void showTextContent(String result){
@@ -373,45 +331,9 @@ public class ContentActivity extends Activity {
 		@Override
 		public boolean onTouch(View v, MotionEvent event) {
 			if(v instanceof ScrollView){
-				return imgGesture.onTouchEvent(event);
 			} else if (v instanceof PagedView) {
 				return textGesture.onTouchEvent(event);
 			}
-			return false;
-		}
-	}
-	
-	/**
-	 * 手势检测，用于图片章节
-	 * */
-	private class FlipOverGestureForImage extends SimpleOnGestureListener{
-		@Override
-		public boolean onSingleTapConfirmed(MotionEvent e) {
-			//点击显示ActionBar
-			if(mActionBar.isShowing()) mActionBar.hide();
-			else mActionBar.show();
-			return true;
-		}
-		
-		@Override
-		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
-				float velocityY) {
-			if(e2.getX() - e1.getX() > 100){
-				//先判断是否有当前章节没有显示完毕
-				if(position - 1 > 0){
-					position--;
-					new LoadContent().execute();
-					scrollView.setOnTouchListener(null);
-				}
-			}else if(e1.getX() - e2.getX() > 100){
-				if(position + 1 < book.catalog.size()){
-					position++;
-					new LoadContent().execute();
-					scrollView.setOnTouchListener(null);
-				}
-			}
-			
-			//该事件监听会被注册到ScrollView上，为防止拦截滚动事件，永远返回false;
 			return false;
 		}
 	}
