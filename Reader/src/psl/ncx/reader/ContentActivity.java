@@ -50,7 +50,7 @@ public class ContentActivity extends Activity {
 	/**
 	 * 当前阅读的Book对象
 	 * */
-	private Book book;
+	private Book mBook;
 	/**
 	 * 当前阅读的章节
 	 * */
@@ -120,9 +120,8 @@ public class ContentActivity extends Activity {
 		listener = new PageDownListener();
 		
 		Intent intent = getIntent();
-		book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
-		if (book.catalog == null) book.catalog = DBAccessHelper.queryChaptersById(this, book.bookid);
-		position = book.bookmark < 0 ? 0 : book.bookmark;
+		mBook = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
+		position = mBook.bookmark < 0 ? 0 : mBook.bookmark;
 		
 		new LoadContent().execute();
 	}
@@ -137,26 +136,31 @@ public class ContentActivity extends Activity {
 			startActivity(intent);
 			break;
 		case R.id.action_catalog:
-			mActionBar.hide();
-			intent = new Intent(this, ChapterActivity.class);
-			intent.putExtra(IntentConstant.OPEN_INDEX, position);
-			intent.putExtra(IntentConstant.BOOK_INFO, book);
-			startActivityForResult(intent, 0);
-			overridePendingTransition(R.anim.in_from_top, R.anim.stay);
+			if (mBook.catalog == null) {
+				//如果目录为空，表示载入目录的异步任务没有完成
+				new AlertDialog.Builder(this).setMessage("正在载入目录，请稍等！").show();
+			} else {
+				mActionBar.hide();
+				intent = new Intent(this, ChapterActivity.class);
+				intent.putExtra(IntentConstant.OPEN_INDEX, position);
+				intent.putExtra(IntentConstant.BOOK_INFO, mBook);
+				startActivityForResult(intent, 0);
+				overridePendingTransition(R.anim.in_from_top, R.anim.stay);
+			}
 			break;
 		case R.id.action_download:
 			//下载任务开启
 			item.setEnabled(false);
 			item.setIcon(R.drawable.downloading);
 			intent = new Intent(this, DownloadService.class);
-			intent.putExtra(IntentConstant.BOOK_INFO, book);
+			intent.putExtra(IntentConstant.BOOK_INFO, mBook);
 			startService(intent);
 			break;
 		}
 		return true;
 	}
 	
-	@Override
+	@Override 
 	public boolean onTouchEvent(MotionEvent event) {
 		return textGesture.onTouchEvent(event);
 	}
@@ -198,7 +202,7 @@ public class ContentActivity extends Activity {
 	protected void onPause() {
 		super.onPause();
 		//保存书签
-		DBAccessHelper.updateBookMark(this, book.bookid, position);
+		DBAccessHelper.updateBookMark(this, mBook.bookid, position);
 	}
 	
 	/**
@@ -217,14 +221,21 @@ public class ContentActivity extends Activity {
 		
 		@Override
 		protected String doInBackground(Void... params) {
-			String cname = book.catalog.get(position).title.replaceAll("[/\\s\\.\\\\]", ""); 
-			String url = book.catalog.get(position).link;
+			if (mBook.catalog == null) {	//如果没有载入目录，则先载入，并校验载入章节索引的有效性
+				mBook.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, mBook.bookid);
+				if (position < 0) position = 0;
+				else if (position >= mBook.catalog.size()) position = mBook.catalog.size() - 1;
+			}
+			
+			String cname = mBook.catalog.get(position).title.replaceAll("[/\\s\\.\\\\]", ""); 
+			String url = mBook.catalog.get(position).link;
+
 			//先从缓存中读取内容
 			String textContent = DataAccessUtil
-					.loadTextContentFromCache(ContentActivity.this, book.bookid + "-" + cname + ".txt");
+					.loadTextContentFromCache(ContentActivity.this, mBook.bookid + "-" + cname + ".txt");
 			if (textContent != null) {
 				if (textContent.equals("")) {	//删除不包含内容的缓存文件
-					File file = new File(getCacheDir(), book.bookid + "-" + cname + ".txt");
+					File file = new File(getCacheDir(), mBook.bookid + "-" + cname + ".txt");
 					file.delete();
 				} else {
 					return textContent;
@@ -239,11 +250,10 @@ public class ContentActivity extends Activity {
 			} catch (IOException e) {
 				return CONNECT_FAILED;
 			}
-			
-			//文本章节
-			String content = psl.ncx.reader.business.ContentResolver.resolveContent(doc, book.from);
-			if (useCache && !StringUtil.isBlank(content))
-				DataAccessUtil.storeTextContent(ContentActivity.this, content, book.bookid + "-" + cname + ".txt");
+			String content = psl.ncx.reader.business.ContentResolver.resolveContent(doc, mBook.from);
+			if (useCache && !StringUtil.isBlank(content)) {
+				DataAccessUtil.storeTextContent(ContentActivity.this, content, mBook.bookid + "-" + cname + ".txt");
+			}
 			return content;
 		}
 		
@@ -257,7 +267,7 @@ public class ContentActivity extends Activity {
 					public void onClick(DialogInterface dialog, int which) {
 						dialog.dismiss();
 					}
-				});
+				}).show();
 			}else if(CONNECT_FAILED.equals(result)){
 				showConnectFailed(result);
 			}else{
@@ -316,7 +326,7 @@ public class ContentActivity extends Activity {
 			contentView = (PagedView) findViewById(R.id.view_content);
 			contentView.setLongClickable(true);
 			contentView.enableDragOver(true);
-			contentView.setTitle(book.catalog.get(position).title);
+			contentView.setTitle(mBook.catalog.get(position).title);
 			contentView.setText(result);
 			contentView.setOnPagingListener(pagingListener);
 			contentView.setOnTouchListener(listener);
