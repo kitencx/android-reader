@@ -67,6 +67,10 @@ public class ContentActivity extends Activity {
 	 * 手势检测
 	 * */
 	private GestureDetector textGesture;
+	/**
+	 * 用于标识翻页之后显示第一页还是最后一页
+	 * */
+	private boolean showLast;
 	
 	private OnPagingListener pagingListener = new OnPagingListener() {
 
@@ -81,12 +85,14 @@ public class ContentActivity extends Activity {
 		@Override
 		public void onPageOverForward(View v) {
 			position++;
+			showLast = false;
 			new LoadContent().execute();
 		}
 
 		@Override
 		public void onPageOverBack(View v) {
 			position--;
+			showLast = true;
 			new LoadContent().execute();
 		}
 		
@@ -172,6 +178,7 @@ public class ContentActivity extends Activity {
 			switch(resultCode){
 			case Activity.RESULT_OK:
 				position = data.getIntExtra(IntentConstant.OPEN_INDEX, 0);
+				showLast = false;	//当用户选择某个章节时，永远显示第一页
 				new LoadContent().execute();
 				break;
 			}
@@ -327,7 +334,7 @@ public class ContentActivity extends Activity {
 			contentView.setLongClickable(true);
 			contentView.enableDragOver(true);
 			contentView.setTitle(mBook.catalog.get(position).title);
-			contentView.setText(result);
+			contentView.setText(result, showLast);
 			contentView.setOnPagingListener(pagingListener);
 			contentView.setOnTouchListener(listener);
 		}

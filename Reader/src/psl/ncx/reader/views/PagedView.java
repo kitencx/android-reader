@@ -66,7 +66,10 @@ public class PagedView extends View {
 	 * 标识此次触摸操作是否经过ACTION_MOVE
 	 * */
 	private boolean isMoved;
-	
+	/**
+	 * 标识翻页之后显示第一页还是最后一页
+	 * */
+	private boolean showLast;
 	
 	/**
 	 * 必须提供该构造，否则无法在xml中使用该View
@@ -92,7 +95,13 @@ public class PagedView extends View {
 	 * 设置当前章节的内容
 	 * */
 	public void setText(String content) {
+		this.setText(content, false);
+	}
+	
+	public void setText(String content, boolean showLast) {
 		this.mContent = content;
+		this.showLast = showLast;
+		requestLayout();
 	}
 	
 	/**
@@ -165,7 +174,7 @@ public class PagedView extends View {
 				//横向移动距离大于100px，翻页
 				if (dx > 0) {
 					if (mPrePage == null) {
-						if (mListener != null) mListener.onPageOverBack(this);
+						if (mListener != null) 	mListener.onPageOverBack(this);
 					} else {
 						if (mListener != null) mListener.onPageUp(this);
 						mCurPointer--;
@@ -173,7 +182,7 @@ public class PagedView extends View {
 					}
 				} else {
 					if (mNextPage == null) {
-						if (mListener != null) mListener.onPageOverForward(this);
+						if (mListener != null) 	mListener.onPageOverForward(this);
 					} else {
 						if (mListener != null) mListener.onPageDown(this);
 						mCurPointer++;
@@ -184,7 +193,7 @@ public class PagedView extends View {
 				//快速点击，则翻页，并且此次触摸事件没有经过移动
 				if (mDownPointer.x > mScreenSize.x/2 + 100 && !isMoved) {
 					if (mNextPage == null) {
-						if (mListener != null) mListener.onPageOverForward(this);
+						if (mListener != null) 	mListener.onPageOverForward(this);
 					} else {
 						if (mListener != null) mListener.onPageDown(this);
 						mMovedPointer.x = mDownPointer.x - getWidth();
@@ -192,7 +201,7 @@ public class PagedView extends View {
 					}
 				} else if (mDownPointer.x < mScreenSize.x/2 - 100 && !isMoved) {
 					if (mPrePage == null) {
-						if (mListener != null) mListener.onPageOverBack(this);
+						if (mListener != null) 	mListener.onPageOverBack(this);
 					} else {
 						if (mListener != null) mListener.onPageUp(this);
 						mMovedPointer.x = mDownPointer.x + getWidth();
@@ -227,7 +236,7 @@ public class PagedView extends View {
 	/**
 	 * 返回下一页内容，如果没有下一页，则返回null
 	 * */
-	public ArrayList<String> nextPage() {
+	ArrayList<String> nextPage() {
 		mTextPaint.setTextSize(21.0f);
 		int lineCount = (int) ((getHeight() - getPaddingBottom() - getPaddingTop()) / mTextPaint.getFontSpacing());
 		int drawWidth = getWidth() - getPaddingLeft() - getPaddingRight();
@@ -350,6 +359,8 @@ public class PagedView extends View {
 		while ((page = nextPage()) != null) {
 			mPages.add(page);
 		}
+		//判断翻页动作，决定是显示第一页还是最后一页
+		mCurPointer = showLast ? mPages.size() - 1 : 0;
 	}
 	
 	/**

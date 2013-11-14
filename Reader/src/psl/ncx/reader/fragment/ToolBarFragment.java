@@ -115,6 +115,7 @@ public class ToolBarFragment extends Fragment {
 						chapters.removeAll(old);
 						if (chapters.size() > 0) {
 							DBAccessHelper.addNewChapter(getActivity(), chapters, book);
+							//更新当前book的目录信息
 							book.catalog = DBAccessHelper.queryChaptersById(getActivity(), book.bookid);
 						}
 					}
