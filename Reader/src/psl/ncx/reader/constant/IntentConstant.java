@@ -12,4 +12,5 @@ public interface IntentConstant {
 	public static final String OPEN_INDEX = "psl.ncx.reader.open.index";
 	/**下载完成度*/
 	public static final String DOWNLOAD_PERCENT = "psl.ncx.reader.dlpercent";
+	public static final String BOOKID = "psl.ncx.reader.bookid";
 }

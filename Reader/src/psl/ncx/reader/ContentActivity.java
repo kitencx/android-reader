@@ -11,6 +11,7 @@ import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
 import psl.ncx.reader.service.DownloadService;
+import psl.ncx.reader.service.DownloadService.DownloadServiceBinder;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.views.PagedView;
@@ -18,11 +19,15 @@ import psl.ncx.reader.views.PagedView.OnPagingListener;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Service;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
@@ -47,6 +52,7 @@ public class ContentActivity extends Activity {
 	 * */
 	private PagedView contentView;
 	private ActionBar mActionBar;
+	private MenuItem mDownloadItem;
 	/**
 	 * 当前阅读的Book对象
 	 * */
@@ -71,6 +77,21 @@ public class ContentActivity extends Activity {
 	 * 用于标识翻页之后显示第一页还是最后一页
 	 * */
 	private boolean showLast;
+	/**
+	 * Binder，用于DownloadService的访问操作
+	 * */
+	private DownloadServiceBinder mBinder;
+	private ServiceConnection mServiceConn = new ServiceConnection() {
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			mBinder = null;
+		}
+		
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			mBinder = (DownloadServiceBinder) service;
+		}
+	};
 	
 	private OnPagingListener pagingListener = new OnPagingListener() {
 
@@ -84,16 +105,24 @@ public class ContentActivity extends Activity {
 
 		@Override
 		public void onPageOverForward(View v) {
-			position++;
-			showLast = false;
-			new LoadContent().execute();
+			if (position < mBook.catalog.size() - 1) {
+				position++;
+				showLast = false;
+				new LoadContent().execute();
+			} else {
+				new AlertDialog.Builder(ContentActivity.this).setMessage("已经是最后一章！").show();
+			}
 		}
 
 		@Override
 		public void onPageOverBack(View v) {
-			position--;
-			showLast = true;
-			new LoadContent().execute();
+			if (position > 0) {
+				position--;
+				showLast = true;
+				new LoadContent().execute();
+			} else {
+				new AlertDialog.Builder(ContentActivity.this).setMessage("已经是第一章！").show();
+			}
 		}
 		
 	};
@@ -105,7 +134,9 @@ public class ContentActivity extends Activity {
 		mActionBar = getActionBar();
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
-
+		
+		bindService(new Intent(this, DownloadService.class), mServiceConn, Service.BIND_AUTO_CREATE);
+		
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 		
@@ -117,7 +148,20 @@ public class ContentActivity extends Activity {
 				float x = e.getX(), y = e.getY();
 				if (x > cx - 100 && x < cx + 100 && y > cy -100 && y < cy + 100) {
 					if(mActionBar.isShowing()) mActionBar.hide();
-					else mActionBar.show();
+					else {
+						if (mBinder != null) {
+							if (mBinder.getDownloadStatusById(mBook.bookid)) {
+								if (mDownloadItem != null) {
+									mDownloadItem.setIcon(R.drawable.downloading);
+									mDownloadItem.setEnabled(false);
+								}
+							} else {
+								mDownloadItem.setIcon(R.drawable.download);
+								mDownloadItem.setEnabled(true);
+							}
+						}
+						mActionBar.show();
+					}
 					return true;
 				}
 				return false;
@@ -200,6 +244,7 @@ public class ContentActivity extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.content, menu);
+		mDownloadItem = menu.findItem(R.id.action_download);
 		return true;
 	}
 	/**
@@ -210,6 +255,12 @@ public class ContentActivity extends Activity {
 		super.onPause();
 		//保存书签
 		DBAccessHelper.updateBookMark(this, mBook.bookid, position);
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (mBinder != null) unbindService(mServiceConn);
 	}
 	
 	/**
@@ -261,6 +312,14 @@ public class ContentActivity extends Activity {
 			if (useCache && !StringUtil.isBlank(content)) {
 				DataAccessUtil.storeTextContent(ContentActivity.this, content, mBook.bookid + "-" + cname + ".txt");
 			}
+			
+			//等待下载服务绑定完成
+			while(mBinder == null) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {}
+			}
+			
 			return content;
 		}
 		

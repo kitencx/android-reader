@@ -138,6 +138,7 @@ public class SearchResultActivity extends Activity {
 					Book book = (Book) listView.getItemAtPosition(position);
 					Intent intent = new Intent(SearchResultActivity.this, SummaryActivity.class);
 					intent.putExtra(IntentConstant.BOOK_INFO, book);
+					intent.setFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT);
 					startActivity(intent);
 					overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
 				}

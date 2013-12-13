@@ -175,6 +175,7 @@ public class SummaryActivity extends Activity implements View.OnClickListener{
 					}).show();
 				} else {
 					book.bookid = String.valueOf(bookid);
+					setResult(RESULT_OK);
 					holder.mButtonCollect.setText("阅读");
 					holder.mButtonCollect.setOnClickListener(new OnClickListener() {
 						@Override

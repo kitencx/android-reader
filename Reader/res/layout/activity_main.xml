@@ -5,20 +5,43 @@
     android:orientation="vertical"
     tools:context=".MainActivity" >
 
-	<fragment
-	    android:name="psl.ncx.reader.fragment.BookShelfFragment"
+	<GridView 
+	    android:id="@+id/bookshelf"
 	    android:layout_width="match_parent"
 	    android:layout_height="0dp"
 	    android:layout_weight="9"
-	    android:tag="bookshelf"/>
+	    android:paddingLeft="15dp"
+	    android:paddingRight="15dp"
+	    android:verticalSpacing="15dp"
+	    android:horizontalSpacing="15dp"
+	    android:drawSelectorOnTop="true"
+	    android:listSelector="@drawable/selector_gridview"
+	    android:numColumns="3"/>        
     
-    <fragment
-        android:name="psl.ncx.reader.fragment.ToolBarFragment"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:tag="toolbar"/>
-        
-    
+	<LinearLayout 
+	    android:id="@+id/ll_toolbar"
+	    android:layout_width="match_parent"
+	    android:layout_height="0dp"
+	    android:layout_weight="1"
+	    android:background="#ff000000"
+	    android:orientation="horizontal">
+	    
+	    <ImageButton 
+	        android:id="@+id/toolbar_search"
+	        android:layout_width="wrap_content"
+	        android:layout_height="match_parent"
+	        android:src="@drawable/selector_search"
+	        android:background="#00000000"
+	        android:contentDescription="@string/search"/>
+	    
+	    <ImageButton 
+	        android:id="@+id/toolbar_update"
+	        android:layout_width="wrap_content"
+	        android:layout_height="match_parent"
+	        android:src="@drawable/selector_update"
+	        android:background="#00000000"
+	        android:contentDescription="@string/cover_description"/>
+	    
+	</LinearLayout>
 
 </LinearLayout>

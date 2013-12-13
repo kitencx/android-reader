@@ -36,7 +36,7 @@ public class CoverView extends ImageView {
 		super(context);
 		
 		this.paint = new TextPaint();
-		paint.setTextSize(15.0f);
+		paint.setTextSize(30.0f);
 		paint.setAntiAlias(true);
 	}
 	
@@ -44,7 +44,7 @@ public class CoverView extends ImageView {
 		super(context, attr);
 		
 		this.paint = new TextPaint();
-		paint.setTextSize(15.0f);
+		paint.setTextSize(30.0f);
 		paint.setAntiAlias(true);
 	}
 
@@ -68,7 +68,7 @@ public class CoverView extends ImageView {
 		if (title != null) {
 			if(rect == null){
 				rect = new Rect(getPaddingLeft(), (int)(getHeight() * 0.6f),
-						getWidth() - getPaddingRight(), (int)(getHeight() * 0.6f) + 20);
+						getWidth() - getPaddingRight(), (int)(getHeight() * 0.6f) + 40);
 			}
 			paint.setColor(0xa0000000);
 			canvas.drawRect(rect, paint);
@@ -80,11 +80,12 @@ public class CoverView extends ImageView {
 		}
 		
 		if (percent > 0 && percent < 100) {
+			int dh = (getHeight() - getPaddingTop() - getPaddingBottom());
 			if (bg_rect == null) {
-				bg_rect = new Rect(getPaddingLeft(), getHeight(),
-						getWidth() - getPaddingRight(), getHeight() - percent * getHeight() / 100);
+				bg_rect = new Rect(getPaddingLeft(), dh - dh * percent / 100,
+						getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
 			} else {
-				bg_rect.bottom = getHeight() - percent * getHeight() / 100;
+				bg_rect.top = dh - dh * percent / 100;
 			}
 			paint.setColor(0x803366ff);
 			canvas.drawRect(bg_rect, paint);

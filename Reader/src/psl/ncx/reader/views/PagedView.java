@@ -175,6 +175,7 @@ public class PagedView extends View {
 				if (dx > 0) {
 					if (mPrePage == null) {
 						if (mListener != null) 	mListener.onPageOverBack(this);
+						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
 					} else {
 						if (mListener != null) mListener.onPageUp(this);
 						mCurPointer--;
@@ -183,6 +184,7 @@ public class PagedView extends View {
 				} else {
 					if (mNextPage == null) {
 						if (mListener != null) 	mListener.onPageOverForward(this);
+						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
 					} else {
 						if (mListener != null) mListener.onPageDown(this);
 						mCurPointer++;
@@ -194,6 +196,7 @@ public class PagedView extends View {
 				if (mDownPointer.x > mScreenSize.x/2 + 100 && !isMoved) {
 					if (mNextPage == null) {
 						if (mListener != null) 	mListener.onPageOverForward(this);
+						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
 					} else {
 						if (mListener != null) mListener.onPageDown(this);
 						mMovedPointer.x = mDownPointer.x - getWidth();
@@ -202,6 +205,7 @@ public class PagedView extends View {
 				} else if (mDownPointer.x < mScreenSize.x/2 - 100 && !isMoved) {
 					if (mPrePage == null) {
 						if (mListener != null) 	mListener.onPageOverBack(this);
+						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
 					} else {
 						if (mListener != null) mListener.onPageUp(this);
 						mMovedPointer.x = mDownPointer.x + getWidth();
@@ -237,7 +241,7 @@ public class PagedView extends View {
 	 * 返回下一页内容，如果没有下一页，则返回null
 	 * */
 	ArrayList<String> nextPage() {
-		mTextPaint.setTextSize(21.0f);
+		mTextPaint.setTextSize(40.0f);
 		int lineCount = (int) ((getHeight() - getPaddingBottom() - getPaddingTop()) / mTextPaint.getFontSpacing());
 		int drawWidth = getWidth() - getPaddingLeft() - getPaddingRight();
 		
@@ -292,12 +296,12 @@ public class PagedView extends View {
 	protected void onDraw(Canvas canvas) {
 		//绘制标题
 		if (mTitle != null) {
-			mTextPaint.setTextSize(16.0f);
+			mTextPaint.setTextSize(28.0f);
 			float length = mTextPaint.measureText(mTitle);
 			canvas.drawText(mTitle, (getWidth() - length)/2, mTextPaint.getFontSpacing(), mTextPaint);
 		}
 		//绘制内容
-		mTextPaint.setTextSize(21.0f);
+		mTextPaint.setTextSize(40.0f);
 		float dx = mMovedPointer.x - mDownPointer.x;
 		float space = mTextPaint.getFontSpacing();
 		float x = dx + getPaddingLeft();
@@ -335,8 +339,8 @@ public class PagedView extends View {
 	 * */
 	private void drawPageFooter(Canvas canvas) {
 		if (mPages.size() > 0) {
-			mTextPaint.setTextSize(16.0f);
-			float y = getHeight() - mTextPaint.getFontSpacing();
+			mTextPaint.setTextSize(28.0f);
+			float y = getHeight() - mTextPaint.getTextSize();
 			String footer = "第" + (mCurPointer + 1) + "/" + mPages.size() + "页";
 			float length = mTextPaint.measureText(footer);
 			float x = (getWidth() - length)/2;
@@ -376,7 +380,7 @@ public class PagedView extends View {
 		
 		mTextPaint = new TextPaint();
 		mTextPaint.setAntiAlias(true);
-		mTextPaint.setTextSize(21.0f);
+		mTextPaint.setTextSize(40.0f);
 		
 		mPages = new ArrayList<ArrayList<String>>();
 		

@@ -2,25 +2,20 @@ package psl.ncx.reader.adapter;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import psl.ncx.reader.R;
-import psl.ncx.reader.async.DownloadThread;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.service.DownloadService;
+import psl.ncx.reader.service.DownloadService.DownloadServiceBinder;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.views.CoverView;
 import psl.ncx.reader.views.IndexButton;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
@@ -28,24 +23,22 @@ import android.widget.FrameLayout;
 public class BookShelfAdapter extends BaseAdapter {
 	private Context context;
 	private ArrayList<Book> mBooks;
-	private IBinder mBinder;
-	private ServiceConnection mServConn = new ServiceConnection() {
+	private DownloadServiceBinder mBinder;
+	/**停止按钮事件监听*/
+	private View.OnClickListener mListener = new OnClickListener() {
 		@Override
-		public void onServiceDisconnected(ComponentName name) {
-			mBinder = null;
-		}
-		
-		@Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-			mBinder = service;
+		public void onClick(View v) {
+			IndexButton stop = (IndexButton) v;
+			int index = stop.getPosition();
+			String id = getItem(index).bookid;
+			mBinder.interruptDownloadThreadById(id);
 		}
 	};
 	
-	public BookShelfAdapter(Context context, ArrayList<Book> books){
+	public BookShelfAdapter(Context context, ArrayList<Book> books, DownloadServiceBinder binder){
 		this.context = context;
 		this.mBooks = books;
-		
-		this.context.bindService(new Intent(this.context, DownloadService.class), mServConn, Context.BIND_AUTO_CREATE);
+		this.mBinder = binder;
 	}
 	
 	@Override
@@ -78,13 +71,6 @@ public class BookShelfAdapter extends BaseAdapter {
 		return false;
 	}
 	
-	/**
-	 * 解除绑定的下载服务
-	 * */
-	public void unBindService() {
-		if (mBinder != null) this.context.unbindService(mServConn);
-	}
-	
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		FrameLayout frame = null;
@@ -98,14 +84,12 @@ public class BookShelfAdapter extends BaseAdapter {
 		IndexButton stop = (IndexButton) frame.findViewById(R.id.imagebutton_stop);
 		stop.setPosition(position);
 		Book book = getItem(position);
-		
-		if (isDownloading(position)) {
-			//下载中，显示停止按钮
+		if (mBinder.getDownloadStatusById(book.bookid)) {
 			stop.setVisibility(View.VISIBLE);
-			stop.setOnClickListener(mBtnListener);
 		} else {
-			stop.setVisibility(View.GONE);
+			stop.setVisibility(View.INVISIBLE);
 		}
+		stop.setOnClickListener(mListener);
 		
 		cover.setPercent(book.percent);
 		cover.setTitle(book.bookname);
@@ -120,47 +104,7 @@ public class BookShelfAdapter extends BaseAdapter {
 		
 		return frame;
 	}
-	
-	private View.OnClickListener mBtnListener = new View.OnClickListener() {
-		@Override
-		public void onClick(View v) {
-			int position = ((IndexButton) v).getPosition();
-			//根据position停止对应的Book下载，获取服务Binder
-			ArrayList<WeakReference<Thread>> allTask = ((DownloadService.MyBinder) mBinder).allRunningTask();
-			String cid = getItem(position).bookid;
-			for (int i = 0; i < allTask.size(); i++) {
-				DownloadThread task = (DownloadThread) allTask.get(i).get();
-				if (task != null && task.isAlive()) {
-					String lid = task.getBook().bookid;
-					if (lid.equals(cid)) {
-						task.interrupt();
-					}
-				}
-			}
-		}
-	};
-	
-	/**
-	 * 判断给定索引位置的Book是否正在后台下载，若后台服务没有成功绑定，则一直返回false
-	 * */
-	private boolean isDownloading(int position) {
-		if (mBinder != null) {
-			Book book = getItem(position);
-			ArrayList<WeakReference<Thread>> allTask = ((DownloadService.MyBinder) mBinder).allRunningTask();
-			int count = allTask.size();
-			for (int i = 0; i < count; i++) {
-				DownloadThread task = (DownloadThread) allTask.get(i).get();
-				if (task != null && task.isAlive()) {
-					Book b = task.getBook();
-					if (b.bookid.equals(book.bookid)) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-	
+
 	/**
 	 * 删除指定的Book
 	 * @param 指定Book的索引
