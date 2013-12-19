@@ -19,6 +19,7 @@ import psl.ncx.reader.views.PagedView.OnPagingListener;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.DialogInterface;
@@ -36,9 +37,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ScrollView;
 
 public class ContentActivity extends Activity {
@@ -131,11 +130,17 @@ public class ContentActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		setContentView(R.layout.activity_content);
+		
 		mActionBar = getActionBar();
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
 		
 		bindService(new Intent(this, DownloadService.class), mServiceConn, Service.BIND_AUTO_CREATE);
+		
+		contentView = (PagedView) findViewById(R.id.view_content);
+		contentView.setLongClickable(true);
+		contentView.enableDragOver(true);
 		
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
@@ -168,6 +173,9 @@ public class ContentActivity extends Activity {
 			}
 		}); 
 		listener = new PageDownListener();
+		
+		contentView.setOnPagingListener(pagingListener);
+		contentView.setOnTouchListener(listener);
 		
 		Intent intent = getIntent();
 		mBook = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
@@ -206,6 +214,23 @@ public class ContentActivity extends Activity {
 			intent.putExtra(IntentConstant.BOOK_INFO, mBook);
 			startService(intent);
 			break;
+		case R.id.action_font_increment:
+			if (contentView != null) {
+				float textSize = contentView.getTextSize();
+				if (textSize < 80.0f) {
+					contentView.setTextSize(++textSize);
+					contentView.invalidate();
+				}
+			}
+			break;
+		case R.id.action_font_decrement:
+			if (contentView != null) {
+				float textSize = contentView.getTextSize();
+				if (textSize > 16.0f) {
+					contentView.setTextSize(--textSize);
+					contentView.invalidate();
+				}
+			}
 		}
 		return true;
 	}
@@ -267,14 +292,10 @@ public class ContentActivity extends Activity {
 	 * 异步任务，获取章节内容
 	 * */
 	class LoadContent extends AsyncTask<Void, Void, String>{
+		private ProgressDialog dialog;
 		@Override
 		protected void onPreExecute() {
-			if (contentView != null) contentView.abortAnimation();
-			//显示载入动画
-			setContentView(R.layout.loading);
-			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
-			processing.setOnTouchListener(listener);
-			processing.startAnimation(AnimationUtils.loadAnimation(ContentActivity.this, R.drawable.processing));
+			dialog = ProgressDialog.show(ContentActivity.this, "请稍候！", "正在载入内容。", true, false);
 		}
 		
 		@Override
@@ -325,6 +346,8 @@ public class ContentActivity extends Activity {
 		
 		@Override
 		protected void onPostExecute(String result) {
+			if (dialog != null) dialog.dismiss();
+			
 			if(result == null){
 				AlertDialog.Builder builder = new AlertDialog.Builder(ContentActivity.this, R.style.SimpleDialogTheme);
 				builder.setMessage("没有可用的网络！")
@@ -387,15 +410,9 @@ public class ContentActivity extends Activity {
 		 * 显示文本章节内容
 		 * */
 		private void showTextContent(String result){
-			setContentView(R.layout.activity_content);
 			result = replacePunctuMarks(result);
-			contentView = (PagedView) findViewById(R.id.view_content);
-			contentView.setLongClickable(true);
-			contentView.enableDragOver(true);
 			contentView.setTitle(mBook.catalog.get(position).title);
 			contentView.setText(result, showLast);
-			contentView.setOnPagingListener(pagingListener);
-			contentView.setOnTouchListener(listener);
 		}
 	}
 	

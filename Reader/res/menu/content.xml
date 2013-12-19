@@ -1,10 +1,16 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:showAsAction="never"
-        android:title="@string/action_settings"/>
+    <item 
+        android:id="@+id/action_font_decrement"
+        android:showAsAction="always"
+        android:icon="@drawable/font_decrement"
+        android:title="@string/action_title_font_decrement"/>
+    
+    <item 
+        android:id="@+id/action_font_increment"
+        android:showAsAction="always"
+        android:icon="@drawable/font_increment"
+        android:title="@string/action_title_font_increment"/>
     
     <item 
         android:id="@+id/action_download"

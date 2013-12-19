@@ -21,6 +21,7 @@ public class PagedView extends View {
 	/**
 	 * 绘制正文的文本画笔
 	 * */
+	private float mTextSize;
 	private TextPaint mTextPaint;
 	/**
 	 * 按下、移动、抬起的触摸点坐标
@@ -70,6 +71,10 @@ public class PagedView extends View {
 	 * 标识翻页之后显示第一页还是最后一页
 	 * */
 	private boolean showLast;
+	/**
+	 * 标识是否需要重新计算页数
+	 * */
+	private boolean reCalc;
 	
 	/**
 	 * 必须提供该构造，否则无法在xml中使用该View
@@ -101,7 +106,21 @@ public class PagedView extends View {
 	public void setText(String content, boolean showLast) {
 		this.mContent = content;
 		this.showLast = showLast;
-		requestLayout();
+		this.reCalc = true;
+		invalidate();
+	}
+	
+	/**
+	 * 设置当前文本的字体大小
+	 * */
+	public void setTextSize(float textSize) {
+		this.mTextSize = textSize;
+		this.reCalc = true;
+		invalidate();
+	}
+	
+	public float getTextSize() {
+		return this.mTextSize;
 	}
 	
 	/**
@@ -241,7 +260,7 @@ public class PagedView extends View {
 	 * 返回下一页内容，如果没有下一页，则返回null
 	 * */
 	ArrayList<String> nextPage() {
-		mTextPaint.setTextSize(40.0f);
+		mTextPaint.setTextSize(mTextSize);
 		int lineCount = (int) ((getHeight() - getPaddingBottom() - getPaddingTop()) / mTextPaint.getFontSpacing());
 		int drawWidth = getWidth() - getPaddingLeft() - getPaddingRight();
 		
@@ -287,13 +306,8 @@ public class PagedView extends View {
 	}
 	
 	@Override
-	protected void onLayout(boolean changed, int left, int top, int right,
-			int bottom) {
-		calcPages();
-	}
-	
-	@Override
 	protected void onDraw(Canvas canvas) {
+		if (reCalc) calcPages();
 		//绘制标题
 		if (mTitle != null) {
 			mTextPaint.setTextSize(28.0f);
@@ -301,12 +315,13 @@ public class PagedView extends View {
 			canvas.drawText(mTitle, (getWidth() - length)/2, mTextPaint.getFontSpacing(), mTextPaint);
 		}
 		//绘制内容
-		mTextPaint.setTextSize(40.0f);
+		mTextPaint.setTextSize(mTextSize);
 		float dx = mMovedPointer.x - mDownPointer.x;
 		float space = mTextPaint.getFontSpacing();
 		float x = dx + getPaddingLeft();
 		float y = space + getPaddingTop();
 		
+		if (mPrePage == null && mCurPointer > 0) mPrePage = mPages.get(mCurPointer - 1); 
 		if (mPrePage != null) {
 			for (String str : mPrePage) {
 				canvas.drawText(str, x - getWidth(), y, mTextPaint);
@@ -323,6 +338,7 @@ public class PagedView extends View {
 			}
 		}
 		
+		if (mNextPage == null && mCurPointer < mPages.size() - 2) mNextPage = mPages.get(mCurPointer + 1);
 		if (mNextPage != null) {
 			y = space + getPaddingTop();
 			for (String str : mNextPage) {
@@ -365,6 +381,8 @@ public class PagedView extends View {
 		}
 		//判断翻页动作，决定是显示第一页还是最后一页
 		mCurPointer = showLast ? mPages.size() - 1 : 0;
+		mPrePage = null; mCurPage = null; mNextPage = null;
+		reCalc = false;
 	}
 	
 	/**
@@ -379,8 +397,9 @@ public class PagedView extends View {
 		mMovedPointer = new PointF();
 		
 		mTextPaint = new TextPaint();
+		mTextSize = 40.0f;
 		mTextPaint.setAntiAlias(true);
-		mTextPaint.setTextSize(40.0f);
+		mTextPaint.setTextSize(mTextSize);
 		
 		mPages = new ArrayList<ArrayList<String>>();
 		

@@ -67,7 +67,6 @@ public class MainActivity extends Activity {
 		public void onReceive(Context context, Intent intent) {
 			String id = intent.getStringExtra("BOOKID");
 			int percent = intent.getIntExtra(IntentConstant.DOWNLOAD_PERCENT, 0);
-			System.out.println("接收广播，percent=" + percent + "，bookid=" + id);
 			for (int i = 0; i < mData.size(); i++) {
 				Book book = mData.get(i);
 				if (book.bookid.equals(id)) {
@@ -122,6 +121,7 @@ public class MainActivity extends Activity {
 	protected void onDestroy() {
 		super.onDestroy();
 		if (mBinder != null) unbindService(mServiceConn);
+		stopService(new Intent(this, DownloadService.class));
 	}
 	
 	@Override

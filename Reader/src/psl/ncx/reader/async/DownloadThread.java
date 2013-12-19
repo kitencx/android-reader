@@ -68,7 +68,6 @@ public class DownloadThread extends Thread {
 				intent.putExtra(IntentConstant.DOWNLOAD_PERCENT, percent);
 				intent.putExtra("BOOKID", mBook.bookid);
 				context.sendBroadcast(intent);
-				System.out.println("发送广播(action=" + DownloadService.class.getName() + ")：" + percent);
 			} catch (IOException e) {
 				//忽略当前的，继续下一个任务
 			}
