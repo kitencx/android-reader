@@ -139,6 +139,8 @@ public class ContentActivity extends Activity {
 		bindService(new Intent(this, DownloadService.class), mServiceConn, Service.BIND_AUTO_CREATE);
 		
 		contentView = (PagedView) findViewById(R.id.view_content);
+		contentView.setTextSize(getSharedPreferences("ReaderPreference", 
+				MODE_PRIVATE).getFloat("DEFAULT_TEXTSIZE", 36.0f));
 		contentView.setLongClickable(true);
 		contentView.enableDragOver(true);
 		
@@ -146,6 +148,13 @@ public class ContentActivity extends Activity {
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 		
 		textGesture = new GestureDetector(this, new SimpleOnGestureListener(){
+			@Override
+			public boolean onScroll(MotionEvent e1, MotionEvent e2,
+					float distanceX, float distanceY) {
+				if (mActionBar.isShowing()) mActionBar.hide();
+				return false;
+			}
+			
 			@Override
 			public boolean onSingleTapConfirmed(MotionEvent e) {
 				//点击显示ActionBar
@@ -218,7 +227,7 @@ public class ContentActivity extends Activity {
 			if (contentView != null) {
 				float textSize = contentView.getTextSize();
 				if (textSize < 80.0f) {
-					contentView.setTextSize(++textSize);
+					contentView.setTextSize(textSize + 2);
 					contentView.invalidate();
 				}
 			}
@@ -227,7 +236,7 @@ public class ContentActivity extends Activity {
 			if (contentView != null) {
 				float textSize = contentView.getTextSize();
 				if (textSize > 16.0f) {
-					contentView.setTextSize(--textSize);
+					contentView.setTextSize(textSize - 2);
 					contentView.invalidate();
 				}
 			}

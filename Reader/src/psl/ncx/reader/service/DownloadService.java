@@ -31,13 +31,10 @@ public class DownloadService extends Service {
 	@Override
 	public void onCreate() {
 		mAllTask = new HashMap<String, WeakReference<Thread>>();
-		System.out.println("onCreate");
 	}
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		System.out.println("onStartCommand");
-		System.out.println(intent);
 		Book target = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		if (target != null) {
 			WeakReference<Thread> wrt = mAllTask.get(target.bookid);

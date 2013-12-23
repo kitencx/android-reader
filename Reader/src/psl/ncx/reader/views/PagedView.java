@@ -72,9 +72,10 @@ public class PagedView extends View {
 	 * */
 	private boolean showLast;
 	/**
-	 * 标识是否需要重新计算页数
+	 * 标识是否需要重新计算页数，是否保持在当前页
 	 * */
 	private boolean reCalc;
+	private boolean isStay;
 	
 	/**
 	 * 必须提供该构造，否则无法在xml中使用该View
@@ -106,6 +107,7 @@ public class PagedView extends View {
 	public void setText(String content, boolean showLast) {
 		this.mContent = content;
 		this.showLast = showLast;
+		this.isStay = false;
 		this.reCalc = true;
 		invalidate();
 	}
@@ -115,6 +117,7 @@ public class PagedView extends View {
 	 * */
 	public void setTextSize(float textSize) {
 		this.mTextSize = textSize;
+		this.isStay = true;
 		this.reCalc = true;
 		invalidate();
 	}
@@ -356,17 +359,12 @@ public class PagedView extends View {
 	private void drawPageFooter(Canvas canvas) {
 		if (mPages.size() > 0) {
 			mTextPaint.setTextSize(28.0f);
-			float y = getHeight() - mTextPaint.getTextSize();
 			String footer = "第" + (mCurPointer + 1) + "/" + mPages.size() + "页";
 			float length = mTextPaint.measureText(footer);
 			float x = (getWidth() - length)/2;
+			float y = getHeight() - (mTextPaint.getFontSpacing() - mTextPaint.getTextSize());
 			canvas.drawText(footer, x, y, mTextPaint);
-		} else {
-			//没有页面，表示当前页面获取内容有问题，显示一个提示语句
-			String hint = "啊哦，获取不到本章节的内容信息，很抱歉！";
-			float length = mTextPaint.measureText(hint);
-			canvas.drawText(hint, (mScreenSize.x - length)/2, mScreenSize.y/2, mTextPaint);
-		}
+		} 
 	}
 	
 	/**
@@ -380,7 +378,8 @@ public class PagedView extends View {
 			mPages.add(page);
 		}
 		//判断翻页动作，决定是显示第一页还是最后一页
-		mCurPointer = showLast ? mPages.size() - 1 : 0;
+		if (!isStay) mCurPointer = showLast ? mPages.size() - 1 : 0;
+		else if (mCurPointer > mPages.size() - 1) mCurPointer = mPages.size() - 1;
 		mPrePage = null; mCurPage = null; mNextPage = null;
 		reCalc = false;
 	}
@@ -401,6 +400,7 @@ public class PagedView extends View {
 		mTextPaint.setAntiAlias(true);
 		mTextPaint.setTextSize(mTextSize);
 		
+		mContent = "";
 		mPages = new ArrayList<ArrayList<String>>();
 		
 		mScroller = new Scroller(getContext());
