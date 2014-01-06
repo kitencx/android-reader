@@ -17,6 +17,7 @@ import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.views.PagedView;
 import psl.ncx.reader.views.PagedView.OnPagingListener;
 import android.app.ActionBar;
+import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -31,6 +32,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -38,6 +40,8 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 
 public class ContentActivity extends Activity {
@@ -52,6 +56,7 @@ public class ContentActivity extends Activity {
 	private PagedView contentView;
 	private ActionBar mActionBar;
 	private MenuItem mDownloadItem;
+	private PopupWindow mFontSizeSelector;
 	/**
 	 * 当前阅读的Book对象
 	 * */
@@ -85,88 +90,99 @@ public class ContentActivity extends Activity {
 		public void onServiceDisconnected(ComponentName name) {
 			mBinder = null;
 		}
-		
+
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			mBinder = (DownloadServiceBinder) service;
 		}
 	};
-	
+
 	private OnPagingListener pagingListener = new OnPagingListener() {
 
 		@Override
 		public void onPageUp(View v) {
+			hideActionBar();
 		}
 
 		@Override
 		public void onPageDown(View v) {
+			hideActionBar();
 		}
 
 		@Override
 		public void onPageOverForward(View v) {
+			hideActionBar();
 			if (position < mBook.catalog.size() - 1) {
 				position++;
 				showLast = false;
 				new LoadContent().execute();
 			} else {
-				new AlertDialog.Builder(ContentActivity.this).setMessage("已经是最后一章！").show();
+				new AlertDialog.Builder(ContentActivity.this).setMessage(
+						"已经是最后一章！").show();
 			}
 		}
 
 		@Override
 		public void onPageOverBack(View v) {
+			hideActionBar();
 			if (position > 0) {
 				position--;
 				showLast = true;
 				new LoadContent().execute();
 			} else {
-				new AlertDialog.Builder(ContentActivity.this).setMessage("已经是第一章！").show();
+				new AlertDialog.Builder(ContentActivity.this).setMessage(
+						"已经是第一章！").show();
 			}
 		}
-		
+
 	};
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.activity_content);
-		
+
 		mActionBar = getActionBar();
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
-		
-		bindService(new Intent(this, DownloadService.class), mServiceConn, Service.BIND_AUTO_CREATE);
-		
+
+		bindService(new Intent(this, DownloadService.class), mServiceConn,
+				Service.BIND_AUTO_CREATE);
+
 		contentView = (PagedView) findViewById(R.id.view_content);
-		contentView.setTextSize(getSharedPreferences("ReaderPreference", 
+		contentView.setTextSize(getSharedPreferences("ReaderPreference",
 				MODE_PRIVATE).getFloat("DEFAULT_TEXTSIZE", 36.0f));
 		contentView.setLongClickable(true);
 		contentView.enableDragOver(true);
-		
+
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
-		
-		textGesture = new GestureDetector(this, new SimpleOnGestureListener(){
+
+		textGesture = new GestureDetector(this, new SimpleOnGestureListener() {
 			@Override
-			public boolean onScroll(MotionEvent e1, MotionEvent e2,
-					float distanceX, float distanceY) {
-				if (mActionBar.isShowing()) mActionBar.hide();
+			public boolean onDown(MotionEvent e) {
+				if (mFontSizeSelector != null && mFontSizeSelector.isShowing()) {
+					mFontSizeSelector.dismiss();
+				}
 				return false;
 			}
 			
 			@Override
 			public boolean onSingleTapConfirmed(MotionEvent e) {
-				//点击显示ActionBar
+				// 点击显示ActionBar
 				int cx = screenSize.x / 2, cy = screenSize.y / 2;
 				float x = e.getX(), y = e.getY();
-				if (x > cx - 100 && x < cx + 100 && y > cy -100 && y < cy + 100) {
-					if(mActionBar.isShowing()) mActionBar.hide();
+				if (x > cx - 100 && x < cx + 100 && y > cy - 100
+						&& y < cy + 100) {
+					if (mActionBar.isShowing())
+						mActionBar.hide();
 					else {
 						if (mBinder != null) {
 							if (mBinder.getDownloadStatusById(mBook.bookid)) {
 								if (mDownloadItem != null) {
-									mDownloadItem.setIcon(R.drawable.downloading);
+									mDownloadItem
+											.setIcon(R.drawable.downloading);
 									mDownloadItem.setEnabled(false);
 								}
 							} else {
@@ -180,21 +196,21 @@ public class ContentActivity extends Activity {
 				}
 				return false;
 			}
-		}); 
+		});
 		listener = new PageDownListener();
-		
+
 		contentView.setOnPagingListener(pagingListener);
 		contentView.setOnTouchListener(listener);
-		
+
 		Intent intent = getIntent();
 		mBook = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
 		position = mBook.bookmark < 0 ? 0 : mBook.bookmark;
-		
+
 		new LoadContent().execute();
 	}
-	
+
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
+	public boolean onOptionsItemSelected(final MenuItem item) {
 		switch(item.getItemId()){
 		case android.R.id.home:
 			Intent intent = new Intent(this, MainActivity.class);
@@ -224,53 +240,79 @@ public class ContentActivity extends Activity {
 			startService(intent);
 			break;
 		case R.id.action_font_increment:
-			if (contentView != null) {
-				float textSize = contentView.getTextSize();
-				if (textSize < 80.0f) {
-					contentView.setTextSize(textSize + 2);
-					contentView.invalidate();
-				}
+			if (mFontSizeSelector != null && mFontSizeSelector.isShowing()) {
+				mFontSizeSelector.dismiss();
+			} else {
+				LinearLayout ll = new LinearLayout(this);
+				Button big = new Button(this);
+				big.setText("+");
+				big.setOnClickListener(new OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						if (contentView != null) {
+							float textSize = contentView.getTextSize();
+							if (textSize < 80.0f) {
+								contentView.setTextSize(textSize + 2);
+								contentView.invalidate();
+							}
+						}
+					}
+				});
+				Button small = new Button(this);
+				small.setText("-");
+				small.setOnClickListener(new OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						if (contentView != null) {
+							float textSize = contentView.getTextSize();
+							if (textSize > 16.0f) {
+								contentView.setTextSize(textSize - 2);
+								contentView.invalidate();
+							}
+						}
+					}
+				});
+				ll.addView(small, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+				ll.addView(big, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+				ll.setBackgroundColor(0xff000000);
+				mFontSizeSelector = new PopupWindow(ll, 
+						LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, false);
+				mFontSizeSelector.setOutsideTouchable(true);
+				mFontSizeSelector.showAtLocation(contentView, Gravity.TOP, 96 * 3, mActionBar.getHeight() + 5);
 			}
+
 			break;
-		case R.id.action_font_decrement:
-			if (contentView != null) {
-				float textSize = contentView.getTextSize();
-				if (textSize > 16.0f) {
-					contentView.setTextSize(textSize - 2);
-					contentView.invalidate();
-				}
-			}
 		}
 		return true;
 	}
-	
-	@Override 
+
+	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		return textGesture.onTouchEvent(event);
 	}
-	
+
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		switch(requestCode){
+		switch (requestCode) {
 		case 0:
-			switch(resultCode){
+			switch (resultCode) {
 			case Activity.RESULT_OK:
 				position = data.getIntExtra(IntentConstant.OPEN_INDEX, 0);
-				showLast = false;	//当用户选择某个章节时，永远显示第一页
+				showLast = false; // 当用户选择某个章节时，永远显示第一页
 				new LoadContent().execute();
 				break;
 			}
 			break;
 		}
 	}
-	
+
 	/**
 	 * 覆写该方法，使它每次返回的时候都回到书架
 	 * */
 	@Override
 	public void onBackPressed() {
 		Intent intent = new Intent(this, MainActivity.class);
-		//返回书架，必须设置Flag，否则只会新建一个MainActivity
+		// 返回书架，必须设置Flag，否则只会新建一个MainActivity
 		intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		startActivity(intent);
 	}
@@ -281,117 +323,142 @@ public class ContentActivity extends Activity {
 		mDownloadItem = menu.findItem(R.id.action_download);
 		return true;
 	}
+
 	/**
 	 * 方法被覆写，触发书签保存操作
 	 * */
 	@Override
 	protected void onPause() {
 		super.onPause();
-		//保存书签
+		// 保存书签
 		DBAccessHelper.updateBookMark(this, mBook.bookid, position);
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		if (mBinder != null) unbindService(mServiceConn);
+		if (mBinder != null)
+			unbindService(mServiceConn);
 	}
-	
+
+	/** 隐藏ActionBar */
+	private void hideActionBar() {
+		if (mActionBar != null) {
+			if (mActionBar.isShowing())
+				mActionBar.hide();
+		}
+	}
+
 	/**
 	 * 异步任务，获取章节内容
 	 * */
-	class LoadContent extends AsyncTask<Void, Void, String>{
+	class LoadContent extends AsyncTask<Void, Void, String> {
 		private ProgressDialog dialog;
+
 		@Override
 		protected void onPreExecute() {
-			dialog = ProgressDialog.show(ContentActivity.this, "请稍候！", "正在载入内容。", true, false);
+			dialog = ProgressDialog.show(ContentActivity.this, "请稍候！",
+					"正在载入内容。", true, false);
 		}
-		
+
 		@Override
 		protected String doInBackground(Void... params) {
-			if (mBook.catalog == null) {	//如果没有载入目录，则先载入，并校验载入章节索引的有效性
-				mBook.catalog = DBAccessHelper.queryChaptersById(ContentActivity.this, mBook.bookid);
-				if (position < 0) position = 0;
-				else if (position >= mBook.catalog.size()) position = mBook.catalog.size() - 1;
+			if (mBook.catalog == null) { // 如果没有载入目录，则先载入，并校验载入章节索引的有效性
+				mBook.catalog = DBAccessHelper.queryChaptersById(
+						ContentActivity.this, mBook.bookid);
+				if (position < 0)
+					position = 0;
+				else if (position >= mBook.catalog.size())
+					position = mBook.catalog.size() - 1;
 			}
-			
-			String cname = mBook.catalog.get(position).title.replaceAll("[/\\s\\.\\\\]", ""); 
+
+			String cname = mBook.catalog.get(position).title.replaceAll(
+					"[/\\s\\.\\\\]", "");
 			String url = mBook.catalog.get(position).link;
 
-			//先从缓存中读取内容
-			String textContent = DataAccessUtil
-					.loadTextContentFromCache(ContentActivity.this, mBook.bookid + "-" + cname + ".txt");
+			// 先从缓存中读取内容
+			String textContent = DataAccessUtil.loadTextContentFromCache(
+					ContentActivity.this, mBook.bookid + "-" + cname + ".txt");
 			if (textContent != null) {
-				if (textContent.equals("")) {	//删除不包含内容的缓存文件
-					File file = new File(getCacheDir(), mBook.bookid + "-" + cname + ".txt");
+				if (textContent.equals("")) { // 删除不包含内容的缓存文件
+					File file = new File(getCacheDir(), mBook.bookid + "-"
+							+ cname + ".txt");
 					file.delete();
 				} else {
 					return textContent;
 				}
 			}
-			
-			if (!HttpUtil.hasAvaliableNetwork(ContentActivity.this)) return null;
-			//从网络获取内容
+
+			if (!HttpUtil.hasAvaliableNetwork(ContentActivity.this))
+				return null;
+			// 从网络获取内容
 			Document doc = null;
 			try {
 				doc = Jsoup.connect(url).timeout(10000).get();
 			} catch (IOException e) {
 				return CONNECT_FAILED;
 			}
-			String content = psl.ncx.reader.business.ContentResolver.resolveContent(doc, mBook.from);
+			String content = psl.ncx.reader.business.ContentResolver
+					.resolveContent(doc, mBook.from);
 			if (useCache && !StringUtil.isBlank(content)) {
-				DataAccessUtil.storeTextContent(ContentActivity.this, content, mBook.bookid + "-" + cname + ".txt");
+				DataAccessUtil.storeTextContent(ContentActivity.this, content,
+						mBook.bookid + "-" + cname + ".txt");
 			}
-			
-			//等待下载服务绑定完成
-			while(mBinder == null) {
+
+			// 等待下载服务绑定完成
+			while (mBinder == null) {
 				try {
 					Thread.sleep(100);
-				} catch (InterruptedException e) {}
+				} catch (InterruptedException e) {
+				}
 			}
-			
+
 			return content;
 		}
-		
+
 		@Override
 		protected void onPostExecute(String result) {
-			if (dialog != null) dialog.dismiss();
-			
-			if(result == null){
-				AlertDialog.Builder builder = new AlertDialog.Builder(ContentActivity.this, R.style.SimpleDialogTheme);
+			if (dialog != null)
+				dialog.dismiss();
+
+			if (result == null) {
+				AlertDialog.Builder builder = new AlertDialog.Builder(
+						ContentActivity.this, R.style.SimpleDialogTheme);
 				builder.setMessage("没有可用的网络！")
-				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						dialog.dismiss();
-					}
-				}).show();
-			}else if(CONNECT_FAILED.equals(result)){
+						.setPositiveButton("确定",
+								new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog,
+											int which) {
+										dialog.dismiss();
+									}
+								}).show();
+			} else if (CONNECT_FAILED.equals(result)) {
 				showConnectFailed(result);
-			}else{
+			} else {
 				showTextContent(result);
 			}
 		}
-		
+
 		/**
 		 * 替换所有半角标点为全角，美化文本显示
 		 * */
-		private String replacePunctuMarks(String src){
+		private String replacePunctuMarks(String src) {
 			StringBuilder builder = new StringBuilder();
-			for(int i = 0; i < src.length(); i++){
+			for (int i = 0; i < src.length(); i++) {
 				char c = src.charAt(i);
-				switch(c){
+				switch (c) {
 				case 160:
 				case 32:
-					//替换空格
-					builder.append((char)160).append(((char)160));
+					// 替换空格
+					builder.append((char) 160).append(((char) 160));
 					break;
 				case 8220:
-					//替换双引号
-					builder.append((char)12317);
+					// 替换双引号
+					builder.append((char) 12317);
 					break;
 				case 8221:
-					builder.append((char)12318);
+					builder.append((char) 12318);
 					break;
 				default:
 					builder.append(c);
@@ -399,11 +466,11 @@ public class ContentActivity extends Activity {
 			}
 			return builder.toString();
 		}
-		
+
 		/**
 		 * 连接失败，则显示重试按钮
 		 * */
-		private void showConnectFailed(String result){
+		private void showConnectFailed(String result) {
 			setContentView(R.layout.button_center);
 			Button retry = (Button) findViewById(R.id.button_center);
 			retry.setText("连接失败，重试？");
@@ -414,25 +481,25 @@ public class ContentActivity extends Activity {
 				}
 			});
 		}
-		
+
 		/**
 		 * 显示文本章节内容
 		 * */
-		private void showTextContent(String result){
+		private void showTextContent(String result) {
 			result = replacePunctuMarks(result);
 			contentView.setTitle(mBook.catalog.get(position).title);
 			contentView.setText(result, showLast);
 		}
 	}
-	
+
 	/**
 	 * 翻页事件监听
 	 * */
-	private class PageDownListener implements OnTouchListener{
+	private class PageDownListener implements OnTouchListener {
 
 		@Override
 		public boolean onTouch(View v, MotionEvent event) {
-			if(v instanceof ScrollView){
+			if (v instanceof ScrollView) {
 			} else if (v instanceof PagedView) {
 				return textGesture.onTouchEvent(event);
 			}
