@@ -18,10 +18,12 @@
     <string name="title_activity_summary">SummaryActivity</string>
     <string name="button_download">下载本书</string>
     <string name="button_collect">收藏本书</string>
+    <string name="button_retry">加载失败，点击重试！</string>
     <string name="action_title_catalog">目录</string>
     <string name="action_close">关闭</string>
     <string name="action_title_download">下载本书</string>
     <string name="action_title_font_increment">增大字体</string>
     <string name="action_title_font_decrement">减小字体</string>
+    <string name="show_when_empty">很不幸，没有匹配的结果！</string>
 
 </resources>

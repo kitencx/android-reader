@@ -1,6 +1,7 @@
 package psl.ncx.reader;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import psl.ncx.reader.adapter.BookListAdapter;
 import psl.ncx.reader.business.BookSearch;
@@ -15,17 +16,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.TextView;
+import android.widget.ProgressBar;
 
 public class SearchResultActivity extends Activity {
 	/**搜索结果显示容器*/
-	private ListView listView;
+	private ListView mLvResult;
+	/**重试按钮*/
+	private Button mBtnRetry;
+	/**加载指示*/
+	private ProgressBar mLoadIndicator;
+	/**结果数据Adapter*/
+	private BookListAdapter mAdapter;
+	private List<Book> mData;
 	/**当前搜索的关键字*/
 	private String keyword;
 
@@ -33,10 +39,35 @@ public class SearchResultActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
+		setContentView(R.layout.activity_searchresult);
+		
 		getActionBar().setHomeButtonEnabled(true);
 		
 		Intent intent = getIntent();
 		keyword = intent.getStringExtra(IntentConstant.SEARCH_KEYWORD);
+		
+		mLvResult = (ListView) findViewById(R.id.listview_result);
+		mBtnRetry = (Button) findViewById(R.id.btn_retry);
+		mLoadIndicator = (ProgressBar) findViewById(R.id.pb_loadindicator);
+		
+		mData = new ArrayList<Book>();
+		mAdapter = new BookListAdapter(this, R.layout.listitem_booklist, mData);
+		mLvResult.setAdapter(mAdapter);
+		//添加空显示
+		mLvResult.setEmptyView(findViewById(R.id.tv_empty));
+		mLvResult.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				Book book = (Book) mLvResult.getItemAtPosition(position);
+				Intent intent = new Intent(SearchResultActivity.this, SummaryActivity.class);
+				intent.putExtra(IntentConstant.BOOK_INFO, book);
+				intent.setFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT);
+				startActivity(intent);
+				overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
+			}
+		});
+		
 		//载入数据
 		new SearchBook().execute(keyword);
 	}
@@ -73,9 +104,10 @@ public class SearchResultActivity extends Activity {
 		 * */
 		@Override
 		protected void onPreExecute() {
-			setContentView(R.layout.loading);
-			ImageView processing = (ImageView) findViewById(R.id.imageview_loading);
-			processing.startAnimation(AnimationUtils.loadAnimation(SearchResultActivity.this, R.drawable.processing));
+			mAdapter.setLoading(true);
+			mLvResult.setVisibility(View.GONE);
+			mBtnRetry.setVisibility(View.GONE);
+			mLoadIndicator.setVisibility(View.VISIBLE);
 		}
 		
 		/**
@@ -103,12 +135,12 @@ public class SearchResultActivity extends Activity {
 		
 		@Override
 		protected void onPostExecute(ArrayList<Book> result) {
+			mLoadIndicator.setVisibility(View.GONE);
 			if(result == null){
 				/*搜索发生意外*/
-				setContentView(R.layout.button_center);
-				Button retry = (Button) findViewById(R.id.button_center);
-				retry.setText("连接错误，重试？");
-				retry.setOnClickListener(new OnClickListener() {
+				mLvResult.setVisibility(View.GONE);
+				mBtnRetry.setVisibility(View.VISIBLE);
+				mBtnRetry.setOnClickListener(new OnClickListener() {
 					@Override
 					public void onClick(View v) {
 						new SearchBook().execute(keyword);
@@ -116,33 +148,16 @@ public class SearchResultActivity extends Activity {
 						v.setOnClickListener(null);
 					}
 				});
-				return;
+			} else {
+				/*搜索成功*/
+				mAdapter.setLoading(false);
+				mBtnRetry.setVisibility(View.GONE);
+				mLvResult.setVisibility(View.VISIBLE);
+				//清楚原有内容
+				mData.clear();
+				mData.addAll(result);
+				mAdapter.notifyDataSetChanged();
 			}
-			/*搜索成功*/
-			setContentView(R.layout.activity_search_result);
-			listView = (ListView) findViewById(R.id.listview_result);
-			if(result.isEmpty()){
-				TextView header = new TextView(SearchResultActivity.this);
-				header.setText("很不幸，没有匹配的结果！");
-				listView.addHeaderView(header, null, false);
-			}
-			
-			BookListAdapter adapter = new BookListAdapter(SearchResultActivity.this, R.layout.listitem_booklist, result);
-			
-			listView.setAdapter(adapter);
-			/*为每个Item添加点击响应，点击打开简介页*/
-			listView.setOnItemClickListener(new OnItemClickListener() {
-				@Override
-				public void onItemClick(AdapterView<?> parent, View view,
-						int position, long id) {
-					Book book = (Book) listView.getItemAtPosition(position);
-					Intent intent = new Intent(SearchResultActivity.this, SummaryActivity.class);
-					intent.putExtra(IntentConstant.BOOK_INFO, book);
-					intent.setFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT);
-					startActivity(intent);
-					overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
-				}
-			});
 		}
 	}
 }

@@ -7,11 +7,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Document;
 
+import psl.ncx.reader.async.DownloadThread;
 import psl.ncx.reader.constant.IntentConstant;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.service.DownloadService;
-import psl.ncx.reader.service.DownloadService.DownloadServiceBinder;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.util.HttpUtil;
 import psl.ncx.reader.views.PagedView;
@@ -20,19 +19,16 @@ import android.app.ActionBar;
 import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.app.Service;
-import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Point;
+import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -42,9 +38,21 @@ import android.view.View.OnTouchListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 
 public class ContentActivity extends Activity {
+	/**
+	 * ViewHolder，布局的所有组件集合
+	 * @author kitencx
+	 *
+	 */
+	class ViewHolder {
+		public ProgressBar loadIndicator;
+		public Button btnRetry;
+		public PagedView contentView;
+	}
+	
 	private final String CONNECT_FAILED = "connect_failed";
 	/**
 	 * 标识是否开启内容缓存
@@ -53,7 +61,7 @@ public class ContentActivity extends Activity {
 	/**
 	 * 页面组件
 	 * */
-	private PagedView contentView;
+	private ViewHolder mViewHolder;
 	private ActionBar mActionBar;
 	private MenuItem mDownloadItem;
 	private PopupWindow mFontSizeSelector;
@@ -81,37 +89,19 @@ public class ContentActivity extends Activity {
 	 * 用于标识翻页之后显示第一页还是最后一页
 	 * */
 	private boolean showLast;
-	/**
-	 * Binder，用于DownloadService的访问操作
-	 * */
-	private DownloadServiceBinder mBinder;
-	private ServiceConnection mServiceConn = new ServiceConnection() {
-		@Override
-		public void onServiceDisconnected(ComponentName name) {
-			mBinder = null;
-		}
-
-		@Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-			mBinder = (DownloadServiceBinder) service;
-		}
-	};
 
 	private OnPagingListener pagingListener = new OnPagingListener() {
 
 		@Override
 		public void onPageUp(View v) {
-			hideActionBar();
 		}
 
 		@Override
 		public void onPageDown(View v) {
-			hideActionBar();
 		}
 
 		@Override
 		public void onPageOverForward(View v) {
-			hideActionBar();
 			if (position < mBook.catalog.size() - 1) {
 				position++;
 				showLast = false;
@@ -124,7 +114,6 @@ public class ContentActivity extends Activity {
 
 		@Override
 		public void onPageOverBack(View v) {
-			hideActionBar();
 			if (position > 0) {
 				position--;
 				showLast = true;
@@ -147,64 +136,64 @@ public class ContentActivity extends Activity {
 		mActionBar.setHomeButtonEnabled(true);
 		mActionBar.hide();
 
-		bindService(new Intent(this, DownloadService.class), mServiceConn,
-				Service.BIND_AUTO_CREATE);
-
-		contentView = (PagedView) findViewById(R.id.view_content);
-		contentView.setTextSize(getSharedPreferences("ReaderPreference",
+		mViewHolder = new ViewHolder();
+		mViewHolder.loadIndicator = (ProgressBar) findViewById(R.id.pb_loadindicator);
+		mViewHolder.btnRetry = (Button) findViewById(R.id.btn_retry);
+		mViewHolder.contentView = (PagedView) findViewById(R.id.view_content);
+		mViewHolder.contentView.setTextSize(getSharedPreferences("ReaderPreference",
 				MODE_PRIVATE).getFloat("DEFAULT_TEXTSIZE", 36.0f));
-		contentView.setLongClickable(true);
-		contentView.enableDragOver(true);
+		mViewHolder.contentView.setLongClickable(true);
+		mViewHolder.contentView.enableDragOver(true);
 
 		screenSize = new Point();
 		getWindowManager().getDefaultDisplay().getSize(screenSize);
 
 		textGesture = new GestureDetector(this, new SimpleOnGestureListener() {
 			@Override
-			public boolean onDown(MotionEvent e) {
-				if (mFontSizeSelector != null && mFontSizeSelector.isShowing()) {
-					mFontSizeSelector.dismiss();
+			public boolean onScroll(MotionEvent e1, MotionEvent e2,
+					float distanceX, float distanceY) {
+				if (mActionBar.isShowing()) {
+					mActionBar.hide();
 				}
 				return false;
 			}
 			
 			@Override
-			public boolean onSingleTapConfirmed(MotionEvent e) {
-				// 点击显示ActionBar
-				int cx = screenSize.x / 2, cy = screenSize.y / 2;
-				float x = e.getX(), y = e.getY();
-				if (x > cx - 100 && x < cx + 100 && y > cy - 100
-						&& y < cy + 100) {
-					if (mActionBar.isShowing())
-						mActionBar.hide();
-					else {
-						if (mBinder != null) {
-							if (mBinder.getDownloadStatusById(mBook.bookid)) {
-								if (mDownloadItem != null) {
-									mDownloadItem
-											.setIcon(R.drawable.downloading);
-									mDownloadItem.setEnabled(false);
-								}
-							} else {
-								mDownloadItem.setIcon(R.drawable.download);
-								mDownloadItem.setEnabled(true);
-							}
+			public boolean onSingleTapUp(MotionEvent e) {
+				if (mActionBar.isShowing()) {
+					mActionBar.hide();
+					return true;
+				} else {
+					int cx = screenSize.x / 2, cy = screenSize.y / 2;
+					float x = e.getX(), y = e.getY();
+					if (x > cx - 100 && x < cx + 100 && y > cy - 100	&& y < cy + 100) {
+						if (MainActivity.getDownloadStatusById(mBook.bookid)) {
+							mDownloadItem.setIcon(R.drawable.downloading);
+							mDownloadItem.setEnabled(false);
+						} else {
+							mDownloadItem.setIcon(R.drawable.download);
+							mDownloadItem.setEnabled(true);
 						}
 						mActionBar.show();
+						return true;
 					}
-					return true;
 				}
+				
 				return false;
 			}
 		});
+		
 		listener = new PageDownListener();
 
-		contentView.setOnPagingListener(pagingListener);
-		contentView.setOnTouchListener(listener);
+		mViewHolder.contentView.setOnPagingListener(pagingListener);
+		mViewHolder.contentView.setOnTouchListener(listener);
 
 		Intent intent = getIntent();
-		mBook = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
+		String bookid = intent.getStringExtra(IntentConstant.BOOKID);
+		mBook = MainActivity.getBookById(bookid);
+		//确保position的位置合法
 		position = mBook.bookmark < 0 ? 0 : mBook.bookmark;
+		position = position > mBook.catalog.size() - 1 ? mBook.catalog.size() - 1 : position; 
 
 		new LoadContent().execute();
 	}
@@ -213,10 +202,7 @@ public class ContentActivity extends Activity {
 	public boolean onOptionsItemSelected(final MenuItem item) {
 		switch(item.getItemId()){
 		case android.R.id.home:
-			Intent intent = new Intent(this, MainActivity.class);
-			//返回书架，必须设置Flag，否则只会新建一个MainActivity
-			intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(intent);
+			this.finish();
 			break;
 		case R.id.action_catalog:
 			if (mBook.catalog == null) {
@@ -224,61 +210,33 @@ public class ContentActivity extends Activity {
 				new AlertDialog.Builder(this).setMessage("正在载入目录，请稍等！").show();
 			} else {
 				mActionBar.hide();
-				intent = new Intent(this, ChapterActivity.class);
+				Intent intent = new Intent(this, ChapterActivity.class);
 				intent.putExtra(IntentConstant.OPEN_INDEX, position);
-				intent.putExtra(IntentConstant.BOOK_INFO, mBook);
+				intent.putExtra(IntentConstant.BOOKID, mBook.bookid);
 				startActivityForResult(intent, 0);
-				overridePendingTransition(R.anim.in_from_top, R.anim.stay);
+				overridePendingTransition(R.anim.in_from_top, 0);
 			}
 			break;
 		case R.id.action_download:
 			//下载任务开启
 			item.setEnabled(false);
 			item.setIcon(R.drawable.downloading);
-			intent = new Intent(this, DownloadService.class);
-			intent.putExtra(IntentConstant.BOOK_INFO, mBook);
-			startService(intent);
+			if (!MainActivity.getDownloadStatusById(mBook.bookid)) {
+				Thread task = new DownloadThread(this, mBook.bookid);
+				MainActivity.DL_TASKS.put(mBook.bookid, task);
+				task.start();
+			}
 			break;
 		case R.id.action_font_increment:
 			if (mFontSizeSelector != null && mFontSizeSelector.isShowing()) {
 				mFontSizeSelector.dismiss();
 			} else {
-				LinearLayout ll = new LinearLayout(this);
-				Button big = new Button(this);
-				big.setText("+");
-				big.setOnClickListener(new OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						if (contentView != null) {
-							float textSize = contentView.getTextSize();
-							if (textSize < 80.0f) {
-								contentView.setTextSize(textSize + 2);
-								contentView.invalidate();
-							}
-						}
-					}
-				});
-				Button small = new Button(this);
-				small.setText("-");
-				small.setOnClickListener(new OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						if (contentView != null) {
-							float textSize = contentView.getTextSize();
-							if (textSize > 16.0f) {
-								contentView.setTextSize(textSize - 2);
-								contentView.invalidate();
-							}
-						}
-					}
-				});
-				ll.addView(small, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-				ll.addView(big, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-				ll.setBackgroundColor(0xff000000);
+				LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.fontsize_selector, null);
 				mFontSizeSelector = new PopupWindow(ll, 
-						LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, false);
+						LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, false);
 				mFontSizeSelector.setOutsideTouchable(true);
-				mFontSizeSelector.showAtLocation(contentView, Gravity.TOP, 96 * 3, mActionBar.getHeight() + 5);
+				mFontSizeSelector.setBackgroundDrawable(new ColorDrawable());
+				mFontSizeSelector.showAtLocation(mViewHolder.contentView, Gravity.TOP, 96, mActionBar.getHeight() + 5);
 			}
 
 			break;
@@ -323,7 +281,7 @@ public class ContentActivity extends Activity {
 		mDownloadItem = menu.findItem(R.id.action_download);
 		return true;
 	}
-
+	
 	/**
 	 * 方法被覆写，触发书签保存操作
 	 * */
@@ -333,45 +291,21 @@ public class ContentActivity extends Activity {
 		// 保存书签
 		DBAccessHelper.updateBookMark(this, mBook.bookid, position);
 	}
-
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		if (mBinder != null)
-			unbindService(mServiceConn);
-	}
-
-	/** 隐藏ActionBar */
-	private void hideActionBar() {
-		if (mActionBar != null) {
-			if (mActionBar.isShowing())
-				mActionBar.hide();
-		}
-	}
-
+	
 	/**
 	 * 异步任务，获取章节内容
 	 * */
 	class LoadContent extends AsyncTask<Void, Void, String> {
-		private ProgressDialog dialog;
 
 		@Override
 		protected void onPreExecute() {
-			dialog = ProgressDialog.show(ContentActivity.this, "请稍候！",
-					"正在载入内容。", true, false);
+			mViewHolder.contentView.setVisibility(View.GONE);
+			mViewHolder.btnRetry.setVisibility(View.GONE);
+			mViewHolder.loadIndicator.setVisibility(View.VISIBLE);
 		}
 
 		@Override
 		protected String doInBackground(Void... params) {
-			if (mBook.catalog == null) { // 如果没有载入目录，则先载入，并校验载入章节索引的有效性
-				mBook.catalog = DBAccessHelper.queryChaptersById(
-						ContentActivity.this, mBook.bookid);
-				if (position < 0)
-					position = 0;
-				else if (position >= mBook.catalog.size())
-					position = mBook.catalog.size() - 1;
-			}
-
 			String cname = mBook.catalog.get(position).title.replaceAll(
 					"[/\\s\\.\\\\]", "");
 			String url = mBook.catalog.get(position).link;
@@ -404,23 +338,11 @@ public class ContentActivity extends Activity {
 				DataAccessUtil.storeTextContent(ContentActivity.this, content,
 						mBook.bookid + "-" + cname + ".txt");
 			}
-
-			// 等待下载服务绑定完成
-			while (mBinder == null) {
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-				}
-			}
-
 			return content;
 		}
 
 		@Override
 		protected void onPostExecute(String result) {
-			if (dialog != null)
-				dialog.dismiss();
-
 			if (result == null) {
 				AlertDialog.Builder builder = new AlertDialog.Builder(
 						ContentActivity.this, R.style.SimpleDialogTheme);
@@ -431,6 +353,7 @@ public class ContentActivity extends Activity {
 									public void onClick(DialogInterface dialog,
 											int which) {
 										dialog.dismiss();
+										ContentActivity.this.finish();
 									}
 								}).show();
 			} else if (CONNECT_FAILED.equals(result)) {
@@ -471,10 +394,11 @@ public class ContentActivity extends Activity {
 		 * 连接失败，则显示重试按钮
 		 * */
 		private void showConnectFailed(String result) {
-			setContentView(R.layout.button_center);
-			Button retry = (Button) findViewById(R.id.button_center);
-			retry.setText("连接失败，重试？");
-			retry.setOnClickListener(new OnClickListener() {
+			mViewHolder.loadIndicator.setVisibility(View.GONE);
+			mViewHolder.contentView.setVisibility(View.GONE);
+			
+			mViewHolder.btnRetry.setVisibility(View.VISIBLE);
+			mViewHolder.btnRetry.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View v) {
 					new LoadContent().execute();
@@ -486,9 +410,13 @@ public class ContentActivity extends Activity {
 		 * 显示文本章节内容
 		 * */
 		private void showTextContent(String result) {
+			mViewHolder.loadIndicator.setVisibility(View.GONE);
+			mViewHolder.btnRetry.setVisibility(View.GONE);
+			
+			mViewHolder.contentView.setVisibility(View.VISIBLE);
 			result = replacePunctuMarks(result);
-			contentView.setTitle(mBook.catalog.get(position).title);
-			contentView.setText(result, showLast);
+			mViewHolder.contentView.setTitle(mBook.catalog.get(position).title);
+			mViewHolder.contentView.setText(result, showLast);
 		}
 	}
 

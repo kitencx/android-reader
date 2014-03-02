@@ -2,12 +2,12 @@ package psl.ncx.reader.adapter;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.util.ArrayList;
+import java.util.List;
 
+import psl.ncx.reader.MainActivity;
 import psl.ncx.reader.R;
 import psl.ncx.reader.db.DBAccessHelper;
 import psl.ncx.reader.model.Book;
-import psl.ncx.reader.service.DownloadService.DownloadServiceBinder;
 import psl.ncx.reader.util.DataAccessUtil;
 import psl.ncx.reader.views.CoverView;
 import psl.ncx.reader.views.IndexButton;
@@ -15,40 +15,39 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 
 public class BookShelfAdapter extends BaseAdapter {
-	private Context context;
-	private ArrayList<Book> mBooks;
-	private DownloadServiceBinder mBinder;
+	private Context mContext;
+	/**Book数据*/
+	private List<Book> mData;
 	/**停止按钮事件监听*/
-	private View.OnClickListener mListener = new OnClickListener() {
+	private View.OnClickListener mListener = new View.OnClickListener() {
 		@Override
 		public void onClick(View v) {
-			IndexButton stop = (IndexButton) v;
-			int index = stop.getPosition();
-			String id = getItem(index).bookid;
-			mBinder.interruptDownloadThreadById(id);
+			if (v instanceof IndexButton) {
+				int position = ((IndexButton) v).getPosition();
+				String id = getItem(position).bookid;
+				MainActivity.stopDownloadById(id);
+			} 
 		}
 	};
 	
-	public BookShelfAdapter(Context context, ArrayList<Book> books, DownloadServiceBinder binder){
-		this.context = context;
-		this.mBooks = books;
-		this.mBinder = binder;
+	public BookShelfAdapter(Context context){
+		this.mContext = context;
+		this.mData = MainActivity.BOOKS;
 	}
 	
 	@Override
 	public int getCount() {
-		return mBooks.size();
+		return mData.size();
 	}
 
 	@Override
 	public Book getItem(int position) {
-		return mBooks.get(position);
+		return mData.get(position);
 	}
 
 	@Override
@@ -64,7 +63,7 @@ public class BookShelfAdapter extends BaseAdapter {
 	public boolean remove(int position) {
 		//并且在数据库中删除
 		if (removeBook(position)) {
-			mBooks.remove(position);
+			mData.remove(position);
 			notifyDataSetChanged();
 			return true;
 		}
@@ -75,27 +74,28 @@ public class BookShelfAdapter extends BaseAdapter {
 	public View getView(int position, View convertView, ViewGroup parent) {
 		FrameLayout frame = null;
 		if (convertView == null) {
-			frame = (FrameLayout) LayoutInflater.from(context).inflate(R.layout.listitem_bookshelf, null);
+			frame = (FrameLayout) LayoutInflater.from(mContext).inflate(R.layout.listitem_bookshelf, null);
 		} else {
 			frame = (FrameLayout) convertView;
 		}
-		
 		CoverView cover = (CoverView) frame.findViewById(R.id.coverview);
 		IndexButton stop = (IndexButton) frame.findViewById(R.id.imagebutton_stop);
 		stop.setPosition(position);
+		//判断当前View所显示Book是否正在下载中
 		Book book = getItem(position);
-		if (mBinder.getDownloadStatusById(book.bookid)) {
+		if (MainActivity.getDownloadStatusById(book.bookid)) {
 			stop.setVisibility(View.VISIBLE);
 		} else {
 			stop.setVisibility(View.INVISIBLE);
 		}
+		
 		stop.setOnClickListener(mListener);
 		
 		cover.setPercent(book.percent);
 		cover.setTitle(book.bookname);
 		
 		Bitmap bitmap = null;
-		if (book.cover != null) bitmap = DataAccessUtil.loadCoverImage(context, book.cover);
+		if (book.cover != null) bitmap = DataAccessUtil.loadCoverImage(mContext, book.cover);
 		if (bitmap != null) {
 			cover.setImageBitmap(bitmap);
 		} else {
@@ -114,11 +114,11 @@ public class BookShelfAdapter extends BaseAdapter {
 		final Book delBook = getItem(position);
 		if (delBook != null) {
 			//删除Book信息
-			if (DBAccessHelper.removeBookById(context, delBook.bookid)) {
+			if (DBAccessHelper.removeBookById(mContext, delBook.bookid)) {
 				//删除封面
-				if (delBook.cover != null) context.deleteFile(delBook.cover);
+				if (delBook.cover != null) mContext.deleteFile(delBook.cover);
 				//删除缓存
-				File dir = context.getCacheDir();
+				File dir = mContext.getCacheDir();
 				dir.listFiles(new FileFilter() {
 					@Override
 					public boolean accept(File pathname) {

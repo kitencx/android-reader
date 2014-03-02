@@ -25,7 +25,8 @@ public class ChapterActivity extends Activity {
 		
 		Intent intent = getIntent();
 		position = intent.getIntExtra(IntentConstant.OPEN_INDEX, 0);
-		book = (Book) intent.getSerializableExtra(IntentConstant.BOOK_INFO);
+		String id = intent.getStringExtra(IntentConstant.BOOKID);
+		book = MainActivity.getBookById(id);
 		
 		setContentView(R.layout.activity_chapter);
 		listView = (ListView) findViewById(R.id.listview_chapter);

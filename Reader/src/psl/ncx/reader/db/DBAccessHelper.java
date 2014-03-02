@@ -109,6 +109,7 @@ public class DBAccessHelper {
 			book.bookmark = result.getInt(result.getColumnIndex(BookEntry.COLUMN_BOOKMARK));
 			book.cover = result.getString(result.getColumnIndex(BookEntry.COLUMN_COVER));
 			book.from = result.getString(result.getColumnIndex(BookEntry.COLUMN_FROM));
+			book.catalog = DBAccessHelper.queryChaptersById(context, book.bookid);
 			books.add(book);
 		}
 		result.close();

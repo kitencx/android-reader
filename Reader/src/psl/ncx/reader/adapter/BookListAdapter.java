@@ -1,6 +1,6 @@
 package psl.ncx.reader.adapter;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import psl.ncx.reader.R;
 import psl.ncx.reader.model.Book;
@@ -12,27 +12,53 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 public class BookListAdapter extends BaseAdapter {
-	/*Context*/
-	private Context context;
-	/*显示布局*/
-	private int layout;
-	/*显示数据*/
-	private ArrayList<Book> bookList;
+	/**Context*/
+	private Context mContext;
+	/**显示布局*/
+	private int mLayout;
+	/**显示数据*/
+	private List<Book> mData;
+	/***/
+	private boolean isLoading;
 	
-	public BookListAdapter(Context context, int layout, ArrayList<Book> bookList){
-		this.context = context;
-		this.layout = layout;
-		this.bookList = bookList;
+	public BookListAdapter(Context context, int layout, List<Book> mData){
+		this.mContext = context;
+		this.mLayout = layout;
+		this.mData = mData;
+		this.isLoading = true;
+	}
+	
+	/**
+	 * 获取Adapter当前状态，载入/非载入，防止在载入的时候被认为Adapter是空的
+	 * @return
+	 */
+	public boolean isLoading() {
+		return isLoading;
+	}
+	
+	public void setLoading(boolean flag) {
+		this.isLoading = flag;
+	}
+	
+	/**
+	 * override该方法，当Adapter处于loading状态时，该Adapter不为空
+	 */
+	@Override
+	public boolean isEmpty() {
+		if (isLoading) {
+			return false;
+		}
+		return super.isEmpty();
 	}
 
 	@Override
 	public int getCount() {
-		return bookList.size();
+		return mData.size();
 	}
 
 	@Override
 	public Book getItem(int position) {
-		return bookList.get(position);
+		return mData.get(position);
 	}
 
 	@Override
@@ -43,7 +69,7 @@ public class BookListAdapter extends BaseAdapter {
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		if(convertView == null){
-			convertView = LayoutInflater.from(context).inflate(layout, null);
+			convertView = LayoutInflater.from(mContext).inflate(mLayout, null);
 		}
 		TextView bookName = (TextView)convertView.findViewById(R.id.text_bookname);
 		TextView from = (TextView)convertView.findViewById(R.id.text_from);
