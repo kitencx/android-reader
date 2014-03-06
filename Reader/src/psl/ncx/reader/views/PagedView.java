@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -14,6 +15,10 @@ import android.view.WindowManager;
 import android.widget.Scroller;
 
 public class PagedView extends View {
+	/**
+	 * 翻页动画持续事件
+	 */
+	private static final int DEFAULT_DURATION = 500;
 	/**
 	 * 翻页监听
 	 * */
@@ -60,14 +65,6 @@ public class PagedView extends View {
 	 * */
 	private Point mScreenSize;
 	/**
-	 * 标识当前一页或者后一页没有内容时，是否可将当前页内容进行拖动
-	 * */
-	private boolean canDragOver;
-	/**
-	 * 标识此次触摸操作是否经过ACTION_MOVE
-	 * */
-	private boolean isMoved;
-	/**
 	 * 标识翻页之后显示第一页还是最后一页
 	 * */
 	private boolean showLast;
@@ -76,6 +73,11 @@ public class PagedView extends View {
 	 * */
 	private boolean reCalc;
 	private boolean isStay;
+	private Rect mPreArea1, mPreArea2, mNextArea1, mNextArea2;
+	/**
+	 * 页面偏移距离
+	 */
+	private float dx;
 	
 	/**
 	 * 必须提供该构造，否则无法在xml中使用该View
@@ -137,20 +139,6 @@ public class PagedView extends View {
 		this.mTitle = title;
 	}
 	
-	/**
-	 * 当前一页或者后一页没有内容时，是否可将当前页内容进行拖动
-	 * */
-	public boolean canDragOver() {
-		return canDragOver;
-	}
-	
-	/**
-	 * 当前一页或者后一页没有内容时，是否可将当前页内容进行拖动
-	 * @param flag true 可以拖动
-	 * */
-	public void enableDragOver(boolean flag) {
-		canDragOver = flag;
-	}
 	
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
@@ -158,97 +146,96 @@ public class PagedView extends View {
 		case MotionEvent.ACTION_DOWN:
 			abortAnimation();
 			
-			isMoved = false;
-			
-			mDownPointer.x = event.getX();
-			mMovedPointer.x = event.getX();
-			//当前页
-			if (mPages.size() > 0) mCurPage = mPages.get(mCurPointer);
-			//前一页
-			if (mCurPointer - 1 >= 0) mPrePage = mPages.get(mCurPointer - 1);
+			mDownPointer.x = mMovedPointer.x = event.getX();
+			mDownPointer.y = mMovedPointer.y = event.getY();
+			dx = mMovedPointer.x - mDownPointer.x;
+			//确定前一页、当前页、后一页内容
+			if (mCurPointer >= 0 && mCurPointer < mPages.size()) mCurPage = mPages.get(mCurPointer);
+			if (mCurPointer - 1 >= 0 && mCurPointer - 1 < mPages.size()) mPrePage = mPages.get(mCurPointer - 1);
 			else mPrePage = null;
-			//后一页
-			if (mCurPointer + 1 < mPages.size()) mNextPage = mPages.get(mCurPointer + 1);
+			if (mCurPointer + 1 >= 0 && mCurPointer + 1 < mPages.size()) mNextPage = mPages.get(mCurPointer + 1);
 			else mNextPage = null;
 			
 			break;
 		case MotionEvent.ACTION_MOVE:
-			isMoved = true;
-			float dx = event.getX() - mDownPointer.x;
-			if (dx > 0) {
-				//往右拖动，如果没有上一页，则拖动距离
-				if (mPrePage != null) mMovedPointer.x = mDownPointer.x + dx;
-				else if (canDragOver) mMovedPointer.x = mDownPointer.x + dx;
-			} else {
-				//往左拖动，如果没有下一页，则拖动距离
-				if (mNextPage != null) mMovedPointer.x = mDownPointer.x + dx;
-				else if (canDragOver) mMovedPointer.x = mDownPointer.x + dx;
+			float x = event.getX();
+			float y = event.getY();
+			//防止小距离移动造成无法响应用户点击
+			if (Math.abs(x - mDownPointer.x) > 10) {
+				moveTo(x, y);
 			}
-			invalidate();
 			break;
 		case MotionEvent.ACTION_UP:
-			//抬起时，判断后续动作
-			//如果移动距离大于100px，并且移动的方向有内容，则翻页
-			//如果移动的距离大于100px，但是该方向没有内容，则载入下移章节
-			//如果移动的距离小于100px，则不翻页
-			dx = mMovedPointer.x - mDownPointer.x;
+			//抬起时，判断后续动作（前/后翻页，滚动回原位(不翻页)）
 			if (Math.abs(dx) > 100) {
-				//横向移动距离大于100px，翻页
-				if (dx > 0) {
-					if (mPrePage == null) {
-						if (mListener != null) 	mListener.onPageOverBack(this);
-						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
-					} else {
-						if (mListener != null) mListener.onPageUp(this);
-						mCurPointer--;
-						mScroller.startScroll((int)mMovedPointer.x, 0, getWidth() - (int)dx, 0, 800);
-					}
-				} else {
-					if (mNextPage == null) {
-						if (mListener != null) 	mListener.onPageOverForward(this);
-						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
-					} else {
-						if (mListener != null) mListener.onPageDown(this);
-						mCurPointer++;
-						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx - getWidth(), 0, 800);
-					}
-				} 
-			} else if (dx == 0){
-				//快速点击，则翻页，并且此次触摸事件没有经过移动
-				if (mDownPointer.x > mScreenSize.x/2 + 100 && !isMoved) {
-					if (mNextPage == null) {
-						if (mListener != null) 	mListener.onPageOverForward(this);
-						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
-					} else {
-						if (mListener != null) mListener.onPageDown(this);
-						mMovedPointer.x = mDownPointer.x - getWidth();
-						mCurPointer++;
-					}
-				} else if (mDownPointer.x < mScreenSize.x/2 - 100 && !isMoved) {
-					if (mPrePage == null) {
-						if (mListener != null) 	mListener.onPageOverBack(this);
-						mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
-					} else {
-						if (mListener != null) mListener.onPageUp(this);
-						mMovedPointer.x = mDownPointer.x + getWidth();
-						mCurPointer--;
-					}
+				moveOver(dx < 0);
+			} else if (Math.abs(dx) < 10) {
+				if (mPreArea1.contains((int) mDownPointer.x, (int) mDownPointer.y) 
+						|| mPreArea2.contains((int) mDownPointer.x, (int) mDownPointer.y)) {
+					moveOver(false);
+				} else if (mNextArea1.contains((int) mDownPointer.x, (int) mDownPointer.y)
+						|| mNextArea2.contains((int) mDownPointer.x, (int) mDownPointer.y)) {
+					moveOver(true);
 				}
 			} else {
 				//移动距离不足，滚动回原位
-				mScroller.startScroll((int)mMovedPointer.x, 0, -(int)dx, 0);
+				moveBack();
 			}
-			invalidate();
 			break;
 		}
 		return true;
 	}
 	
+	/**
+	 * 移动到x坐标
+	 * @param x	移动到的x点坐标
+	 */
+	public void moveTo(float x, float y) {
+		mMovedPointer.x = x;
+		mMovedPointer.y = y;
+		dx = mMovedPointer.x - mDownPointer.x;
+		invalidate();
+	}
+	
+	/**
+	 * 将页面恢复到移动前的状态，适用于当手指滑动时，页面跟随移动，松开后不翻页，需要将页面恢复回滑动前的状态
+	 */
+	public void moveBack() {
+		mScroller.startScroll((int) mMovedPointer.x, 0, -(int) dx, 0);
+		invalidate();
+	}
+	
+	/**
+	 * 翻页
+	 * @param forward true:后一页，false:前一页
+	 */
+	public void moveOver(boolean forward) {
+		if (forward) {
+			if (mNextPage == null) {
+				if (mListener != null) mListener.onPageOverForward(this);
+				moveBack();
+			} else {
+				if (mListener != null) mListener.onPageDown(this);
+				mCurPointer++;
+				mScroller.startScroll((int) mMovedPointer.x, 0, -(int) dx - getWidth(), 0, DEFAULT_DURATION);
+			}
+		} else {
+			if (mPrePage == null) {
+				if (mListener != null) mListener.onPageOverBack(this);
+				moveBack();
+			} else {
+				if (mListener != null) mListener.onPageUp(this);
+				mCurPointer--;
+				mScroller.startScroll((int) mMovedPointer.x, 0, getWidth() - (int) dx, 0, DEFAULT_DURATION);
+			}
+		}
+		invalidate();
+	}
+	
 	@Override
 	public void computeScroll() {
 		if (mScroller.computeScrollOffset()) {
-			mMovedPointer.x = mScroller.getCurrX();
-			invalidate();
+			moveTo(mScroller.getCurrX(), mScroller.getCurrY());
 		} 
 	}
 	
@@ -319,7 +306,6 @@ public class PagedView extends View {
 		}
 		//绘制内容
 		mTextPaint.setTextSize(mTextSize);
-		float dx = mMovedPointer.x - mDownPointer.x;
 		float space = mTextPaint.getFontSpacing();
 		float x = dx + getPaddingLeft();
 		float y = space + getPaddingTop();
@@ -391,6 +377,10 @@ public class PagedView extends View {
 		mScreenSize = new Point();
 		((WindowManager)getContext()
 				.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getSize(mScreenSize);
+		mPreArea1 = new Rect(0, 0, mScreenSize.x, mScreenSize.y / 3);
+		mPreArea2 = new Rect(mPreArea1.left, mPreArea1.bottom, mScreenSize.x / 4, mScreenSize.y * 2 / 3);
+		mNextArea1 = new Rect(mPreArea2.left, mPreArea2.bottom, mScreenSize.x, mScreenSize.y);
+		mNextArea2 = new Rect(mScreenSize.x * 3 / 4, mPreArea2.top, mNextArea1.right, mNextArea1.top);
 		
 		mDownPointer = new PointF();
 		mMovedPointer = new PointF();

@@ -3,6 +3,7 @@ package psl.ncx.reader.constant;
 import android.provider.BaseColumns;
 
 public interface TableContract {
+	public static final String AUTHORITY = "psl.ncx.reader";
 	
 	public static interface BookEntry extends BaseColumns{
 		public static final String TABLE_NAME = "reader_book";

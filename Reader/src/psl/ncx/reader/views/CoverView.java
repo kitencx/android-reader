@@ -14,7 +14,7 @@ public class CoverView extends ImageView {
 	/**
 	 * 文本画笔
 	 * */
-	private TextPaint paint;
+	private TextPaint mPaint;
 	/**
 	 * 书名
 	 * */
@@ -22,7 +22,7 @@ public class CoverView extends ImageView {
 	/**
 	 * 书名背景大小
 	 * */
-	private Rect rect;
+	private Rect mTitleRect;
 	/**
 	 * 下载完成百分比
 	 * */
@@ -32,20 +32,12 @@ public class CoverView extends ImageView {
 	 * */
 	private Rect bg_rect;
 	
-	public CoverView(Context context) {
-		super(context);
-		
-		this.paint = new TextPaint();
-		paint.setTextSize(30.0f);
-		paint.setAntiAlias(true);
-	}
-	
 	public CoverView(Context context, AttributeSet attr) {
 		super(context, attr);
 		
-		this.paint = new TextPaint();
-		paint.setTextSize(30.0f);
-		paint.setAntiAlias(true);
+		this.mPaint = new TextPaint();
+		mPaint.setTextSize(30.0f);
+		mPaint.setAntiAlias(true);
 	}
 
 	/**
@@ -66,17 +58,17 @@ public class CoverView extends ImageView {
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
 		if (title != null) {
-			if(rect == null){
-				rect = new Rect(getPaddingLeft(), (int)(getHeight() * 0.6f),
+			if(mTitleRect == null){
+				mTitleRect = new Rect(getPaddingLeft(), (int)(getHeight() * 0.6f),
 						getWidth() - getPaddingRight(), (int)(getHeight() * 0.6f) + 40);
 			}
-			paint.setColor(0xa0000000);
-			canvas.drawRect(rect, paint);
-			paint.setColor(0xffffffff);
-			int length = paint.breakText(title, true, rect.width(), null);
+			mPaint.setColor(0xa0000000);
+			canvas.drawRect(mTitleRect, mPaint);
+			mPaint.setColor(0xffffffff);
+			int length = mPaint.breakText(title, true, mTitleRect.width(), null);
 			title = title.substring(0, length);
-			float x = (getWidth() - paint.measureText(title)) / 2;
-			canvas.drawText(title, x, getHeight() * 0.6f + paint.getTextSize(), paint);
+			float x = (getWidth() - mPaint.measureText(title)) / 2;
+			canvas.drawText(title, x, getHeight() * 0.6f + mPaint.getTextSize(), mPaint);
 		}
 		
 		if (percent > 0 && percent < 100) {
@@ -87,8 +79,12 @@ public class CoverView extends ImageView {
 			} else {
 				bg_rect.top = dh - dh * percent / 100;
 			}
-			paint.setColor(0x803366ff);
-			canvas.drawRect(bg_rect, paint);
+			mPaint.setColor(0x803366ff);
+			canvas.drawRect(bg_rect, mPaint);
+			mPaint.setColor(0xffaaff00);
+			String percentstr = percent + "%";
+			float x = (getWidth() - mPaint.measureText(percentstr)) / 2;
+			canvas.drawText(percentstr, x, getHeight() / 2, mPaint);
 		}
 	}
 }

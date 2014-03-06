@@ -22,6 +22,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -36,10 +37,11 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 
 public class ContentActivity extends Activity {
 	/**
@@ -52,8 +54,9 @@ public class ContentActivity extends Activity {
 		public Button btnRetry;
 		public PagedView contentView;
 	}
-	
-	private final String CONNECT_FAILED = "connect_failed";
+	private final static float DEFAULT_TEXTSIZE = 36.0f;
+	private final static float MIN_TEXTSIZE = 24.0f;
+	private final static String CONNECT_FAILED = "connect_failed";
 	/**
 	 * 标识是否开启内容缓存
 	 * */
@@ -80,7 +83,11 @@ public class ContentActivity extends Activity {
 	/**
 	 * 屏幕尺寸
 	 * */
-	private Point screenSize;
+	private Point mScreenSize;
+	/**
+	 * 点击显示ActionBar的触摸点范围
+	 */
+	private Rect mRect;
 	/**
 	 * 手势检测
 	 * */
@@ -140,13 +147,13 @@ public class ContentActivity extends Activity {
 		mViewHolder.loadIndicator = (ProgressBar) findViewById(R.id.pb_loadindicator);
 		mViewHolder.btnRetry = (Button) findViewById(R.id.btn_retry);
 		mViewHolder.contentView = (PagedView) findViewById(R.id.view_content);
-		mViewHolder.contentView.setTextSize(getSharedPreferences("ReaderPreference",
-				MODE_PRIVATE).getFloat("DEFAULT_TEXTSIZE", 36.0f));
+		mViewHolder.contentView.setTextSize(DEFAULT_TEXTSIZE);
 		mViewHolder.contentView.setLongClickable(true);
-		mViewHolder.contentView.enableDragOver(true);
 
-		screenSize = new Point();
-		getWindowManager().getDefaultDisplay().getSize(screenSize);
+		mScreenSize = new Point();
+		getWindowManager().getDefaultDisplay().getSize(mScreenSize);
+		
+		mRect = new Rect(mScreenSize.x / 4, mScreenSize.y / 3, mScreenSize.x * 3 / 4, mScreenSize.y * 2 / 3);
 
 		textGesture = new GestureDetector(this, new SimpleOnGestureListener() {
 			@Override
@@ -162,11 +169,9 @@ public class ContentActivity extends Activity {
 			public boolean onSingleTapUp(MotionEvent e) {
 				if (mActionBar.isShowing()) {
 					mActionBar.hide();
-					return true;
+					return false;
 				} else {
-					int cx = screenSize.x / 2, cy = screenSize.y / 2;
-					float x = e.getX(), y = e.getY();
-					if (x > cx - 100 && x < cx + 100 && y > cy - 100	&& y < cy + 100) {
+					if (mRect.contains((int) e.getX(), (int) e.getY())) {
 						if (MainActivity.getDownloadStatusById(mBook.bookid)) {
 							mDownloadItem.setIcon(R.drawable.downloading);
 							mDownloadItem.setEnabled(false);
@@ -178,7 +183,6 @@ public class ContentActivity extends Activity {
 						return true;
 					}
 				}
-				
 				return false;
 			}
 		});
@@ -227,18 +231,37 @@ public class ContentActivity extends Activity {
 				task.start();
 			}
 			break;
-		case R.id.action_font_increment:
-			if (mFontSizeSelector != null && mFontSizeSelector.isShowing()) {
-				mFontSizeSelector.dismiss();
-			} else {
-				LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.fontsize_selector, null);
-				mFontSizeSelector = new PopupWindow(ll, 
-						LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, false);
-				mFontSizeSelector.setOutsideTouchable(true);
-				mFontSizeSelector.setBackgroundDrawable(new ColorDrawable());
-				mFontSizeSelector.showAtLocation(mViewHolder.contentView, Gravity.TOP, 96, mActionBar.getHeight() + 5);
-			}
-
+		case R.id.action_fontsize:
+			SeekBar seek = (SeekBar) LayoutInflater.from(this).inflate(R.layout.fontsize_selector, null);
+			float textSize = mViewHolder.contentView.getTextSize();
+			seek.setProgress((int) (textSize - MIN_TEXTSIZE) / 2);
+			seek.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+				@Override
+				public void onStopTrackingTouch(SeekBar seekBar) {}
+				
+				@Override
+				public void onStartTrackingTouch(SeekBar seekBar) {}
+				
+				@Override
+				public void onProgressChanged(SeekBar seekBar, int progress,
+						boolean fromUser) {
+					mViewHolder.contentView.setTextSize(MIN_TEXTSIZE + progress * 2);
+				}
+			});
+			mFontSizeSelector = new PopupWindow(seek, 
+					400, LayoutParams.WRAP_CONTENT, true);
+			mFontSizeSelector.setOutsideTouchable(true);
+			mFontSizeSelector.setBackgroundDrawable(new ColorDrawable(0xffe0e0e0));
+			mFontSizeSelector.showAtLocation(mViewHolder.contentView, Gravity.CENTER_HORIZONTAL|Gravity.TOP, 100, mActionBar.getHeight() + 5);
+			mFontSizeSelector.setTouchInterceptor(new OnTouchListener() {
+				@Override
+				public boolean onTouch(View v, MotionEvent event) {
+					if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+						mFontSizeSelector.dismiss();
+					}
+					return false;
+				}
+			});
 			break;
 		}
 		return true;

@@ -1,10 +1,10 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <item 
-        android:id="@+id/action_font_increment"
+        android:id="@+id/action_fontsize"
         android:showAsAction="always"
-        android:icon="@drawable/font_increment"
-        android:title="@string/action_title_font_increment"/>
+        android:icon="@drawable/fontsize"
+        android:title="@string/action_title_fontsize"/>
     
     <item 
         android:id="@+id/action_download"
